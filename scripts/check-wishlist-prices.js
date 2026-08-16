@@ -1,5 +1,8 @@
 'use strict';
 
+var fs = require('node:fs');
+var path = require('node:path');
+
 // 既存のbackground.js内checkWishlistPricesと同じロジック(閾値未満の下落ではhistを更新しない)を
 // ブラウザ非依存のNode.js純粋関数として移植したもの。
 function detectPriceDrops(items, history, minDiscountPct) {
@@ -95,10 +98,154 @@ function parseVerdictLabel(text) {
   return null;
 }
 
+async function fetchWishlist(steamId64) {
+  var r = await fetch('https://api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=' + steamId64);
+  if (!r.ok) throw new Error('ウィッシュリスト取得に失敗しました(' + r.status + ')');
+  var d = await r.json();
+  return (d.response && d.response.items) || [];
+}
+
+async function fetchPrice(appid) {
+  var r = await fetch('https://store.steampowered.com/api/appdetails?appids=' + appid + '&filters=basic,price_overview&cc=jp');
+  if (!r.ok) return null;
+  var d = await r.json();
+  var info = d && d[appid] && d[appid].data;
+  if (!info || !info.price_overview) return null;
+  return { id: String(appid), name: info.name, price: Math.floor(info.price_overview.final / 100) };
+}
+
+async function fetchReviews(appid, count) {
+  var r = await fetch('https://store.steampowered.com/appreviews/' + appid
+    + '?json=1&num_per_page=' + (count || 15) + '&language=japanese&filter=recent&purchase_type=all');
+  if (!r.ok) return [];
+  var d = await r.json();
+  return (d.reviews || []).map(function (rv) { return rv.review; }).filter(Boolean);
+}
+
+async function fetchVerdict(gameName, reviewTexts, apiKey) {
+  if (!reviewTexts.length) return null;
+  var joined = reviewTexts.join('\n---\n').slice(0, 3000);
+  var prompt = 'あなたはSteamゲームレビューの要約AIです。以下は「' + gameName + '」のユーザーレビュー抜粋です。\n'
+    + 'このゲームの購入判断を、次の5つのラベルのうち1つだけで答えてください。ラベル以外の文字は一切出力しないでください。\n'
+    + 'ラベル: 今すぐ買い / 買い / セール待ち / 人を選ぶ / 見送り\n\n'
+    + 'レビュー:\n' + joined;
+  var body = {
+    type: 'UNIFY_CHAT_WITH_AI',
+    model: 'qwen3-8b',
+    promptObject: { prompt: prompt, settings: { historySettings: { isMixed: false, historyMessageLimit: 0 }, webSearchSettings: { webSearch: false } } }
+  };
+  var r = await fetch('https://api.1min.ai/api/chat-with-ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'API-KEY': apiKey },
+    body: JSON.stringify(body)
+  });
+  var d = await r.json();
+  if (!r.ok || d.errorCode) throw new Error(d.message || String(r.status));
+  var text = (d.aiRecord && d.aiRecord.aiRecordDetail && d.aiRecord.aiRecordDetail.resultObject && d.aiRecord.aiRecordDetail.resultObject[0]) || '';
+  return parseVerdictLabel(text);
+}
+
+async function sendDiscordNotification(embed, webhookUrl) {
+  embed.footer = embed.footer || { text: 'Steam Japanese Translator (Cron)' };
+  embed.timestamp = new Date().toISOString();
+  var r = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ embeds: [embed] })
+  });
+  if (!r.ok) throw new Error('Discord webhook送信に失敗しました(' + r.status + ')');
+}
+
+function loadHistory(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveHistory(filePath, history) {
+  fs.writeFileSync(filePath, JSON.stringify(history, null, 2) + '\n');
+}
+
+async function main() {
+  var steamId = process.env.STEAM_ID64;
+  var webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  var apiKey = process.env.ONEMIN_API_KEY;
+  var minDiscountPct = Number(process.env.MIN_DISCOUNT_PCT || 0);
+  var historyPath = path.join(__dirname, '..', 'price_history.json');
+
+  if (!steamId || !webhookUrl) {
+    console.error('STEAM_ID64 と DISCORD_WEBHOOK_URL は必須です');
+    process.exit(1);
+  }
+
+  var wishlist = await fetchWishlist(steamId);
+  console.log('ウィッシュリスト件数: ' + wishlist.length);
+
+  var items = [];
+  var CHUNK = 4;
+  for (var i = 0; i < wishlist.length; i += CHUNK) {
+    var chunk = wishlist.slice(i, i + CHUNK);
+    var results = await Promise.all(chunk.map(function (w) {
+      return fetchPrice(w.appid).catch(function () { return null; });
+    }));
+    results.forEach(function (r) { if (r) items.push(r); });
+    if (i + CHUNK < wishlist.length) {
+      await new Promise(function (res) { setTimeout(res, 800); });
+    }
+  }
+  console.log('価格取得成功件数: ' + items.length);
+
+  var history = loadHistory(historyPath);
+  var result = detectPriceDrops(items, history, minDiscountPct);
+  console.log('値下げ検知件数: ' + result.drops.length);
+
+  saveHistory(historyPath, result.updatedHistory);
+
+  if (!result.drops.length) {
+    console.log('値下げなし、終了します');
+    return;
+  }
+
+  var verdictMap = {};
+  if (result.drops.length >= 3 && apiKey) {
+    for (var j = 0; j < result.drops.length; j++) {
+      var drop = result.drops[j];
+      try {
+        var reviews = await fetchReviews(drop.id, 15);
+        var verdict = await fetchVerdict(drop.name, reviews, apiKey);
+        if (verdict) verdictMap[drop.id] = verdict;
+      } catch (e) {
+        console.error('AI判定失敗(appid=' + drop.id + '): ' + e.message);
+      }
+    }
+  }
+
+  var embed = buildDiscordEmbed(result.drops, verdictMap);
+  await sendDiscordNotification(embed, webhookUrl);
+  console.log('Discord通知を送信しました');
+}
+
+if (require.main === module) {
+  main().catch(function (e) {
+    console.error(e);
+    process.exit(1);
+  });
+}
+
 module.exports = {
   detectPriceDrops: detectPriceDrops,
   buildDiscordEmbed: buildDiscordEmbed,
+  parseVerdictLabel: parseVerdictLabel,
   VERDICT_RANK: VERDICT_RANK,
   VERDICT_EMOJI: VERDICT_EMOJI,
-  parseVerdictLabel: parseVerdictLabel
+  fetchWishlist: fetchWishlist,
+  fetchPrice: fetchPrice,
+  fetchReviews: fetchReviews,
+  fetchVerdict: fetchVerdict,
+  sendDiscordNotification: sendDiscordNotification,
+  loadHistory: loadHistory,
+  saveHistory: saveHistory,
+  main: main
 };
