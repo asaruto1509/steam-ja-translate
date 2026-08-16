@@ -12,6 +12,7 @@ permissions:
 jobs:
   check-prices:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,6 +27,7 @@ jobs:
           STEAM_ID64: ${{ secrets.STEAM_ID64 }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           ONEMIN_API_KEY: ${{ secrets.ONEMIN_API_KEY }}
+          MIN_DISCOUNT_PCT: '5'
         run: node scripts/check-wishlist-prices.js
 
       - name: Commit updated price history

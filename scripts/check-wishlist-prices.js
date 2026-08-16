@@ -157,11 +157,14 @@ async function sendDiscordNotification(embed, webhookUrl) {
 }
 
 function loadHistory(filePath) {
+  var raw;
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    raw = fs.readFileSync(filePath, 'utf8');
   } catch (e) {
-    return {};
+    if (e.code === 'ENOENT') return {};
+    throw e;
   }
+  return JSON.parse(raw);
 }
 
 function saveHistory(filePath, history) {
@@ -182,6 +185,11 @@ async function main() {
 
   var wishlist = await fetchWishlist(steamId);
   console.log('ウィッシュリスト件数: ' + wishlist.length);
+
+  if (!wishlist.length) {
+    console.error('ウィッシュリストが0件でした。SteamプロフィールとウィッシュリストがPublic設定になっているか確認してください。');
+    process.exit(1);
+  }
 
   var items = [];
   var CHUNK = 4;

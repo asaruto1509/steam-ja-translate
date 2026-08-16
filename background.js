@@ -84,9 +84,9 @@ function ensureWishlistAlarm() {
 // chrome.runtime.onInstalled.addListener(ensureWishlistAlarm);
 // chrome.runtime.onStartup.addListener(ensureWishlistAlarm);
 
-chrome.alarms.onAlarm.addListener(function (alarm) {
-  // if (alarm.name === WISH_ALARM_NAME) checkWishlistPrices();
-});
+// chrome.alarms.onAlarm.addListener(function (alarm) {
+//   if (alarm.name === WISH_ALARM_NAME) checkWishlistPrices();
+// });
 
 async function checkWishlistPrices() {
   try {
