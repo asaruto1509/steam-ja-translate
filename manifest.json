@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Steam Japanese Translator",
+  "version": "1.3.0",
+  "description": "Steamのレビューに翻訳ボタンを追加",
+  "action": {
+    "default_title": "Steam Japanese Translator",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": ["storage", "unlimitedStorage", "scripting", "alarms", "notifications"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.steampowered.com/*",
+        "*://*.steamcommunity.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "*://*.steampowered.com/*",
+    "*://*.steamcommunity.com/*",
+    "*://translate.googleapis.com/*",
+    "*://api.mymemory.translated.net/*",
+    "*://generativelanguage.googleapis.com/*",
+    "*://api.steampowered.com/*",
+    "*://steamspy.com/*",
+    "*://api.1min.ai/*",
+    "*://discord.com/*",
+    "*://api.isthereanydeal.com/*"
+  ]
+}

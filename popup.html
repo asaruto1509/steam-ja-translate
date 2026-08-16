@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 300px;
+      background: #1b2838;
+      color: #c6d4df;
+      font-family: sans-serif;
+      font-size: 13px;
+    }
+    .header {
+      background: #171d25;
+      padding: 12px 16px;
+      border-bottom: 1px solid #2a475e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-title { color: #66c0f4; font-size: 14px; font-weight: bold; }
+    .header-sub { color: #8f98a0; font-size: 11px; margin-top: 2px; }
+    .section { padding: 14px 16px; border-bottom: 1px solid #2a475e; }
+    .section-title {
+      color: #66c0f4;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .field-label { color: #8f98a0; font-size: 11px; margin-bottom: 5px; }
+    .input-row { display: flex; gap: 6px; }
+    input[type="password"], input[type="text"] {
+      flex: 1;
+      background: #2a475e;
+      border: 1px solid #4a5a6a;
+      border-radius: 3px;
+      color: #c6d4df;
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+    input:focus { outline: none; border-color: #66c0f4; }
+    .btn {
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      border: 1px solid;
+      background: #1b2838;
+    }
+    .btn-blue { color: #66c0f4; border-color: #66c0f4; }
+    .btn-yellow { color: #f6c744; border-color: #f6c744; }
+    .btn-red { color: #e74c3c; border-color: #e74c3c; }
+    .btn-green { color: #4caf50; border-color: #4caf50; }
+    .btn:hover { opacity: 0.8; }
+    .status {
+      margin-top: 8px;
+      padding: 6px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      display: none;
+    }
+    .status.ok { background: rgba(76,175,80,0.15); color: #4caf50; border: 1px solid #4caf50; display: block; }
+    .status.err { background: rgba(231,76,60,0.15); color: #e74c3c; border: 1px solid #e74c3c; display: block; }
+    .status.none { background: rgba(246,199,68,0.12); color: #f6c744; border: 1px solid #f6c744; display: block; }
+    .key-display {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #8f98a0;
+      word-break: break-all;
+    }
+    .action-row { display: flex; gap: 6px; margin-top: 10px; }
+    .footer { padding: 10px 16px; color: #4a5a6a; font-size: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="header-title">🔤 Steam Japanese Translator</div>
+      <div class="header-sub">v1.2.0</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🤖 Gemini API キー</div>
+    <div class="field-label">Google AI Studio で無料取得（aistudio.google.com）</div>
+    <div class="input-row">
+      <input type="password" id="apiKeyInput" placeholder="AIza...">
+      <button class="btn btn-blue" id="toggleBtn">表示</button>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-green" id="saveBtn">保存</button>
+      <button class="btn btn-red" id="clearBtn">削除</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="key-display" id="keyDisplay"></div>
+  </div>
+
+  <div class="footer">キーはブラウザのローカルにのみ保存されます</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
