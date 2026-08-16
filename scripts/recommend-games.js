@@ -1,5 +1,7 @@
 'use strict';
 
+var { fetchReviews } = require('./check-wishlist-prices.js');
+
 // top_sellersとnew_releasesの両方に同じゲームが載っているケースがあるため、
 // 選出前にid重複を除去する(同じゲームが1日の投稿内で2回出るのを防ぐ)。
 function _dedupeById(pool) {
@@ -86,8 +88,108 @@ function buildRecommendEmbeds(games) {
   });
 }
 
+async function fetchFeaturedPool() {
+  var r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=jp&l=japanese');
+  if (!r.ok) throw new Error('featuredcategories取得に失敗しました(' + r.status + ')');
+  var d = await r.json();
+  var pool = [];
+  ['top_sellers', 'new_releases'].forEach(function (key) {
+    var items = (d[key] && d[key].items) || [];
+    items.forEach(function (it) {
+      pool.push({
+        id: String(it.id),
+        name: it.name,
+        finalPrice: Math.floor((it.final_price || 0) / 100),
+        originalPrice: Math.floor((it.original_price || it.final_price || 0) / 100),
+        discountPercent: it.discount_percent || 0,
+        image: it.large_capsule_image || it.header_image || null
+      });
+    });
+  });
+  return pool;
+}
+
+async function fetchGameAnalysis(gameName, reviewTexts, apiKey) {
+  if (!reviewTexts.length) return null;
+  var joined = reviewTexts.join('\n---\n').slice(0, 3000);
+  var prompt = 'あなたはSteamゲームレビューの要約AIです。以下は「' + gameName + '」のユーザーレビュー抜粋です。\n'
+    + '次のJSON形式のみで回答してください。説明文やコードブロックは不要です。\n'
+    + '{"verdict":"今すぐ買い/買い/セール待ち/人を選ぶ/見送りのいずれか","reason":"一言理由(20字程度)","good":["良い点1(15字程度)","良い点2(15字程度)"],"concern":"懸念点(15字程度、無ければ空文字)"}\n\n'
+    + 'レビュー:\n' + joined;
+  var body = {
+    type: 'UNIFY_CHAT_WITH_AI',
+    model: 'qwen3-8b',
+    promptObject: { prompt: prompt, settings: { historySettings: { isMixed: false, historyMessageLimit: 0 }, webSearchSettings: { webSearch: false } } }
+  };
+  var r = await fetch('https://api.1min.ai/api/chat-with-ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'API-KEY': apiKey },
+    body: JSON.stringify(body)
+  });
+  var d = await r.json();
+  if (!r.ok || d.errorCode) throw new Error(d.message || String(r.status));
+  var text = (d.aiRecord && d.aiRecord.aiRecordDetail && d.aiRecord.aiRecordDetail.resultObject && d.aiRecord.aiRecordDetail.resultObject[0]) || '';
+  return parseGameAnalysis(text);
+}
+
+async function sendDiscordEmbeds(embeds, webhookUrl) {
+  var r = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: '🎮 今日のおすすめゲーム', embeds: embeds })
+  });
+  if (!r.ok) throw new Error('Discord webhook送信に失敗しました(' + r.status + ')');
+}
+
+async function main() {
+  var webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  var apiKey = process.env.ONEMIN_API_KEY;
+  var pickCount = Number(process.env.RECOMMEND_COUNT || 5);
+
+  if (!webhookUrl) {
+    console.error('DISCORD_WEBHOOK_URL は必須です');
+    process.exit(1);
+  }
+
+  var pool = await fetchFeaturedPool();
+  console.log('候補プール件数: ' + pool.length);
+  if (!pool.length) {
+    console.error('候補プールが0件でした');
+    process.exit(1);
+  }
+
+  var picked = pickRandomGames(pool, pickCount);
+  console.log('選出件数: ' + picked.length);
+
+  for (var i = 0; i < picked.length; i++) {
+    var g = picked[i];
+    try {
+      var reviews = await fetchReviews(g.id, 15);
+      g.analysis = apiKey ? await fetchGameAnalysis(g.name, reviews, apiKey) : null;
+    } catch (e) {
+      console.error('AI分析失敗(appid=' + g.id + '): ' + e.message);
+      g.analysis = null;
+    }
+  }
+
+  var embeds = buildRecommendEmbeds(picked);
+  await sendDiscordEmbeds(embeds, webhookUrl);
+  console.log('Discord通知を送信しました');
+}
+
+if (require.main === module) {
+  main().catch(function (e) {
+    console.error(e);
+    process.exit(1);
+  });
+}
+
 module.exports = {
   pickRandomGames: pickRandomGames,
   parseGameAnalysis: parseGameAnalysis,
-  buildRecommendEmbeds: buildRecommendEmbeds
+  buildRecommendEmbeds: buildRecommendEmbeds,
+  fetchFeaturedPool: fetchFeaturedPool,
+  fetchGameAnalysis: fetchGameAnalysis,
+  sendDiscordEmbeds: sendDiscordEmbeds,
+  main: main
 };
