@@ -80,9 +80,25 @@ function buildDiscordEmbed(drops, verdictMap) {
   };
 }
 
+var VERDICT_LABELS = ['今すぐ買い', '買い', 'セール待ち', '人を選ぶ', '見送り'];
+
+// AIは単一ラベルのみ返すよう指示するが、句読点や引用符が付いて返ることがあるため
+// 完全一致 → 部分一致(長い順、"買い"が"今すぐ買い"の一部に誤爆しないよう長さ降順)の順で判定する。
+function parseVerdictLabel(text) {
+  if (!text) return null;
+  var trimmed = String(text).trim();
+  if (VERDICT_LABELS.indexOf(trimmed) >= 0) return trimmed;
+  var byLength = VERDICT_LABELS.slice().sort(function (a, b) { return b.length - a.length; });
+  for (var i = 0; i < byLength.length; i++) {
+    if (trimmed.indexOf(byLength[i]) >= 0) return byLength[i];
+  }
+  return null;
+}
+
 module.exports = {
   detectPriceDrops: detectPriceDrops,
   buildDiscordEmbed: buildDiscordEmbed,
   VERDICT_RANK: VERDICT_RANK,
-  VERDICT_EMOJI: VERDICT_EMOJI
+  VERDICT_EMOJI: VERDICT_EMOJI,
+  parseVerdictLabel: parseVerdictLabel
 };

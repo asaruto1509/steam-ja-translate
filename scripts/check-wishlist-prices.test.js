@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { detectPriceDrops, buildDiscordEmbed } = require('./check-wishlist-prices.js');
+const { detectPriceDrops, buildDiscordEmbed, parseVerdictLabel } = require('./check-wishlist-prices.js');
 
 test('price drop above threshold is detected and history updates', () => {
   const items = [{ id: '100', name: 'Game A', price: 800 }];
@@ -74,4 +74,22 @@ test('three or more drops with no verdicts at all falls back to plain digest tit
   ];
   const embed = buildDiscordEmbed(drops, {});
   assert.match(embed.title, /3件が値下げされました/);
+});
+
+test('parseVerdictLabel matches an exact label', () => {
+  assert.equal(parseVerdictLabel('今すぐ買い'), '今すぐ買い');
+});
+
+test('parseVerdictLabel matches when the model adds surrounding text', () => {
+  assert.equal(parseVerdictLabel('判定: セール待ち です。'), 'セール待ち');
+});
+
+test('parseVerdictLabel prefers the longer label to avoid substring false match', () => {
+  assert.equal(parseVerdictLabel('今すぐ買いだと思います'), '今すぐ買い');
+});
+
+test('parseVerdictLabel returns null for unrecognized output', () => {
+  assert.equal(parseVerdictLabel('わかりません'), null);
+  assert.equal(parseVerdictLabel(''), null);
+  assert.equal(parseVerdictLabel(null), null);
 });
