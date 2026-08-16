@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { pickRandomGames, parseGameAnalysis } = require('./recommend-games.js');
+const { pickRandomGames, parseGameAnalysis, buildRecommendEmbeds } = require('./recommend-games.js');
 
 test('pickRandomGames returns exactly n items from a larger pool', () => {
   const pool = [
@@ -73,4 +73,53 @@ test('parseGameAnalysis returns null for unparseable text', () => {
   assert.equal(parseGameAnalysis('すみません、分析できませんでした'), null);
   assert.equal(parseGameAnalysis(''), null);
   assert.equal(parseGameAnalysis(null), null);
+});
+
+test('buildRecommendEmbeds includes all analysis fields when analysis succeeded', () => {
+  const games = [{
+    id: '100', name: 'Test Game', finalPrice: 1000, originalPrice: 1000, discountPercent: 0,
+    image: 'https://example.com/img.jpg',
+    analysis: { verdict: '買い', reason: '面白い', good: ['操作性が良い'], concern: '短い' }
+  }];
+  const embeds = buildRecommendEmbeds(games);
+  assert.equal(embeds.length, 1);
+  assert.equal(embeds[0].title, 'Test Game');
+  assert.equal(embeds[0].thumbnail.url, 'https://example.com/img.jpg');
+  const fieldNames = embeds[0].fields.map((f) => f.name);
+  assert.ok(fieldNames.includes('AI判定'));
+  assert.ok(fieldNames.includes('👍 良い点'));
+  assert.ok(fieldNames.includes('⚠ 懸念'));
+});
+
+test('buildRecommendEmbeds degrades to a price-only embed when analysis is null', () => {
+  const games = [{
+    id: '200', name: 'No Analysis Game', finalPrice: 500, originalPrice: 500, discountPercent: 0,
+    image: 'https://example.com/img2.jpg', analysis: null
+  }];
+  const embeds = buildRecommendEmbeds(games);
+  assert.equal(embeds.length, 1);
+  assert.equal(embeds[0].fields.length, 1);
+  assert.equal(embeds[0].fields[0].name, '価格');
+});
+
+test('buildRecommendEmbeds formats a discounted price with strikethrough original price', () => {
+  const games = [{
+    id: '300', name: 'Sale Game', finalPrice: 750, originalPrice: 1000, discountPercent: 25,
+    image: 'https://example.com/img3.jpg', analysis: null
+  }];
+  const embeds = buildRecommendEmbeds(games);
+  assert.match(embeds[0].fields[0].value, /~~¥1,000~~/);
+  assert.match(embeds[0].fields[0].value, /¥750/);
+  assert.match(embeds[0].fields[0].value, /-25%/);
+});
+
+test('buildRecommendEmbeds preserves game order and count across multiple games', () => {
+  const games = [
+    { id: '1', name: 'First', finalPrice: 100, originalPrice: 100, discountPercent: 0, image: 'a', analysis: null },
+    { id: '2', name: 'Second', finalPrice: 200, originalPrice: 200, discountPercent: 0, image: 'b', analysis: null }
+  ];
+  const embeds = buildRecommendEmbeds(games);
+  assert.equal(embeds.length, 2);
+  assert.equal(embeds[0].title, 'First');
+  assert.equal(embeds[1].title, 'Second');
 });

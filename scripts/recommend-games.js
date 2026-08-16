@@ -59,4 +59,35 @@ function parseGameAnalysis(text) {
   return { verdict: verdict, reason: reason, good: good, concern: concern };
 }
 
-module.exports = { pickRandomGames: pickRandomGames, parseGameAnalysis: parseGameAnalysis };
+// AI分析が失敗した場合(analysisがnull)でも、価格情報だけの簡易embedとして必ず1件は出す
+// (5本中1本もAI分析が成功しなかった場合でも「紹介自体はする」という設計方針)。
+function buildRecommendEmbeds(games) {
+  return games.map(function (g) {
+    var priceLine = g.discountPercent > 0
+      ? '~~¥' + g.originalPrice.toLocaleString() + '~~ → **¥' + g.finalPrice.toLocaleString() + '** (-' + g.discountPercent + '%)'
+      : '¥' + g.finalPrice.toLocaleString();
+    var fields = [{ name: '価格', value: priceLine, inline: true }];
+
+    var a = g.analysis;
+    if (a && a.verdict) fields.push({ name: 'AI判定', value: a.verdict, inline: true });
+    if (a && a.reason) fields.push({ name: '理由', value: a.reason, inline: false });
+    if (a && a.good && a.good.length) {
+      fields.push({ name: '👍 良い点', value: a.good.map(function (x) { return '・' + x; }).join('\n'), inline: true });
+    }
+    if (a && a.concern) fields.push({ name: '⚠ 懸念', value: a.concern, inline: true });
+
+    return {
+      title: g.name,
+      url: 'https://store.steampowered.com/app/' + g.id + '/',
+      color: 0x66c0f4,
+      thumbnail: { url: g.image },
+      fields: fields
+    };
+  });
+}
+
+module.exports = {
+  pickRandomGames: pickRandomGames,
+  parseGameAnalysis: parseGameAnalysis,
+  buildRecommendEmbeds: buildRecommendEmbeds
+};
