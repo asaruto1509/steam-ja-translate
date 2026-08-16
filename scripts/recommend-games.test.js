@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { pickRandomGames, parseGameAnalysis, buildRecommendEmbeds } = require('./recommend-games.js');
+const { pickRandomGames, pickAnalyzableGames, parseGameAnalysis, buildRecommendEmbeds } = require('./recommend-games.js');
 
 test('pickRandomGames returns exactly n items from a larger pool', () => {
   const pool = [
@@ -36,6 +36,28 @@ test('pickRandomGames returns fewer items than n if the deduped pool is smaller 
   const pool = [{ id: '1', name: 'A' }, { id: '1', name: 'A (dup)' }];
   const result = pickRandomGames(pool, 5, () => 0);
   assert.equal(result.length, 1);
+});
+
+test('pickAnalyzableGames puts games with enough reviews first, keeps shuffle order within each group', () => {
+  const shuffled = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }];
+  const reviewsByGameId = { '2': ['r1', 'r2', 'r3'], '4': ['r1'] };
+  const result = pickAnalyzableGames(shuffled, 4, reviewsByGameId, 1);
+  assert.deepEqual(result.map((g) => g.id), ['2', '4', '1', '3']);
+});
+
+test('pickAnalyzableGames always returns n items even when nothing meets the review threshold', () => {
+  const shuffled = [{ id: '1' }, { id: '2' }, { id: '3' }];
+  const result = pickAnalyzableGames(shuffled, 3, {}, 1);
+  assert.equal(result.length, 3);
+});
+
+test('pickAnalyzableGames respects the minReviews threshold, not just presence of any reviews', () => {
+  const shuffled = [{ id: '1' }, { id: '2' }];
+  const reviewsByGameId = { '1': ['only one review'] };
+  const result = pickAnalyzableGames(shuffled, 2, reviewsByGameId, 3);
+  // '1' has only 1 review, below the threshold of 3, so it should NOT be treated as analyzable —
+  // both should land in the leftover group, order preserved
+  assert.deepEqual(result.map((g) => g.id), ['1', '2']);
 });
 
 test('parseGameAnalysis parses a clean JSON response', () => {

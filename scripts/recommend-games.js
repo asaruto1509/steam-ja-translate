@@ -27,6 +27,24 @@ function pickRandomGames(pool, n, rng) {
   return arr.slice(0, n);
 }
 
+// shuffledPoolの並び順を維持したまま、reviewsByGameId[game.id]の件数がminReviews以上のものを
+// 先頭にまとめ、残り(レビュー不足)を後ろに回した上でn件返す。レビューがある候補が足りない日でも
+// 必ずn件返す(不足分はprice-onlyカードとして表示するため)。
+function pickAnalyzableGames(shuffledPool, n, reviewsByGameId, minReviews) {
+  minReviews = minReviews || 1;
+  var analyzable = [];
+  var leftover = [];
+  shuffledPool.forEach(function (g) {
+    var count = (reviewsByGameId[g.id] || []).length;
+    if (count >= minReviews) {
+      analyzable.push(g);
+    } else {
+      leftover.push(g);
+    }
+  });
+  return analyzable.concat(leftover).slice(0, n);
+}
+
 // 本日発生した「複雑なJSONスキーマだとAIが指示文の書き写しをそのまま返す」不具合と同じ検知パターン。
 // main.jsの_isLeakedStringと同じ正規表現(数値+「字以内/以上/程度」)を流用し、
 // プロンプト内の文字数指示がそのまま値として書き写された場合にその項目だけを無効化する。
@@ -52,11 +70,11 @@ function parseGameAnalysis(text) {
   if (!obj || typeof obj !== 'object') return null;
 
   var verdict = (typeof obj.verdict === 'string' && !_isLeaked(obj.verdict)) ? obj.verdict : null;
-  var reason = (typeof obj.reason === 'string' && !_isLeaked(obj.reason)) ? obj.reason : '';
+  var reason = (typeof obj.reason === 'string' && !_isLeaked(obj.reason)) ? obj.reason.slice(0, 200) : '';
   var good = Array.isArray(obj.good)
-    ? obj.good.filter(function (g) { return typeof g === 'string' && !_isLeaked(g); }).slice(0, 3)
+    ? obj.good.filter(function (g) { return typeof g === 'string' && !_isLeaked(g); }).slice(0, 3).map(function (g) { return g.slice(0, 200); })
     : [];
-  var concern = (typeof obj.concern === 'string' && !_isLeaked(obj.concern)) ? obj.concern : '';
+  var concern = (typeof obj.concern === 'string' && !_isLeaked(obj.concern)) ? obj.concern.slice(0, 200) : '';
 
   return { verdict: verdict, reason: reason, good: good, concern: concern };
 }
@@ -65,9 +83,11 @@ function parseGameAnalysis(text) {
 // (5本中1本もAI分析が成功しなかった場合でも「紹介自体はする」という設計方針)。
 function buildRecommendEmbeds(games) {
   return games.map(function (g) {
-    var priceLine = g.discountPercent > 0
-      ? '~~¥' + g.originalPrice.toLocaleString() + '~~ → **¥' + g.finalPrice.toLocaleString() + '** (-' + g.discountPercent + '%)'
-      : '¥' + g.finalPrice.toLocaleString();
+    var priceLine = g.finalPrice === 0
+      ? '無料'
+      : g.discountPercent > 0
+        ? '~~¥' + g.originalPrice.toLocaleString() + '~~ → **¥' + g.finalPrice.toLocaleString() + '** (-' + g.discountPercent + '%)'
+        : '¥' + g.finalPrice.toLocaleString();
     var fields = [{ name: '価格', value: priceLine, inline: true }];
 
     var a = g.analysis;
@@ -78,13 +98,14 @@ function buildRecommendEmbeds(games) {
     }
     if (a && a.concern) fields.push({ name: '⚠ 懸念', value: a.concern, inline: true });
 
-    return {
+    var embed = {
       title: g.name,
       url: 'https://store.steampowered.com/app/' + g.id + '/',
       color: 0x66c0f4,
-      thumbnail: { url: g.image },
       fields: fields
     };
+    if (g.image) embed.thumbnail = { url: g.image };
+    return embed;
   });
 }
 
@@ -96,6 +117,8 @@ async function fetchFeaturedPool() {
   ['top_sellers', 'new_releases'].forEach(function (key) {
     var items = (d[key] && d[key].items) || [];
     items.forEach(function (it) {
+      // typeが0以外(パッケージ/バンドル等)はレビューが存在せずストアリンクも無効なため除外する
+      if (it.type !== 0) return;
       pool.push({
         id: String(it.id),
         name: it.name,
@@ -107,6 +130,22 @@ async function fetchFeaturedPool() {
     });
   });
   return pool;
+}
+
+// check-wishlist-prices.jsのfetchReviewsはlanguage=japanese固定でシグネチャ変更不可のため、
+// 0件だった場合だけこちらで全言語版を追加取得する(そのファイル自体は一切変更しない)。
+async function fetchReviewsWithFallback(appid, count) {
+  var reviews = await fetchReviews(appid, count);
+  if (reviews.length) return reviews;
+  try {
+    var r = await fetch('https://store.steampowered.com/appreviews/' + appid
+      + '?json=1&num_per_page=' + (count || 15) + '&language=all&filter=recent&purchase_type=all');
+    if (!r.ok) return [];
+    var d = await r.json();
+    return (d.reviews || []).map(function (rv) { return rv.review; }).filter(Boolean);
+  } catch (e) {
+    return [];
+  }
 }
 
 async function fetchGameAnalysis(gameName, reviewTexts, apiKey) {
@@ -145,6 +184,7 @@ async function main() {
   var webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   var apiKey = process.env.ONEMIN_API_KEY;
   var pickCount = Number(process.env.RECOMMEND_COUNT || 5);
+  if (!pickCount || pickCount < 1) pickCount = 5;
 
   if (!webhookUrl) {
     console.error('DISCORD_WEBHOOK_URL は必須です');
@@ -158,19 +198,38 @@ async function main() {
     process.exit(1);
   }
 
-  var picked = pickRandomGames(pool, pickCount);
-  console.log('選出件数: ' + picked.length);
-
-  for (var i = 0; i < picked.length; i++) {
-    var g = picked[i];
+  var shuffled = pickRandomGames(pool, pool.length);
+  var reviewsByGameId = {};
+  var analyzedCount = 0;
+  for (var i = 0; i < shuffled.length; i++) {
+    var sg = shuffled[i];
     try {
-      var reviews = await fetchReviews(g.id, 15);
-      g.analysis = apiKey ? await fetchGameAnalysis(g.name, reviews, apiKey) : null;
+      reviewsByGameId[sg.id] = await fetchReviewsWithFallback(sg.id, 15);
     } catch (e) {
-      console.error('AI分析失敗(appid=' + g.id + '): ' + e.message);
-      g.analysis = null;
+      reviewsByGameId[sg.id] = [];
     }
   }
+
+  var picked = pickAnalyzableGames(shuffled, pickCount, reviewsByGameId, 3);
+  console.log('選出件数: ' + picked.length);
+  console.log('レビュー3件以上の候補: ' + Object.keys(reviewsByGameId).filter(function (id) { return reviewsByGameId[id].length >= 3; }).length + '/' + shuffled.length);
+
+  if (!apiKey) {
+    console.warn('ONEMIN_API_KEY が未設定のため、全ゲームがAI分析なしで表示されます');
+  }
+
+  for (var j = 0; j < picked.length; j++) {
+    var pg = picked[j];
+    var reviews = reviewsByGameId[pg.id] || [];
+    try {
+      pg.analysis = (apiKey && reviews.length) ? await fetchGameAnalysis(pg.name, reviews, apiKey) : null;
+      if (pg.analysis) analyzedCount++;
+    } catch (e) {
+      console.error('AI分析失敗(appid=' + pg.id + '): ' + e.message);
+      pg.analysis = null;
+    }
+  }
+  console.log('AI分析成功: ' + analyzedCount + '/' + picked.length);
 
   var embeds = buildRecommendEmbeds(picked);
   await sendDiscordEmbeds(embeds, webhookUrl);
@@ -186,6 +245,7 @@ if (require.main === module) {
 
 module.exports = {
   pickRandomGames: pickRandomGames,
+  pickAnalyzableGames: pickAnalyzableGames,
   parseGameAnalysis: parseGameAnalysis,
   buildRecommendEmbeds: buildRecommendEmbeds,
   fetchFeaturedPool: fetchFeaturedPool,
