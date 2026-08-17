@@ -38,7 +38,8 @@ var client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages
-  ]
+  ],
+  allowedMentions: { parse: [], repliedUser: false }
 });
 
 client.once(Events.ClientReady, async function () {

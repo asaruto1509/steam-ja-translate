@@ -26,7 +26,7 @@ async function handleReviewCommand(interaction, steamScripts) {
     var reviews = await steamScripts.fetchReviews(found.id, 15);
     verdict = reviews.length ? await steamScripts.fetchVerdict(found.name, reviews, apiKey) : null;
   }
-  await interaction.editReply(formatReviewReply(gameName, verdict));
+  await interaction.editReply(formatReviewReply(found ? found.name : gameName, verdict));
 }
 
 module.exports = { formatReviewReply: formatReviewReply, handleReviewCommand: handleReviewCommand };

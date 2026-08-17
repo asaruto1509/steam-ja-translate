@@ -28,6 +28,9 @@ async function handleWishlistCommand(interaction, steamId64, scripts, steamLib) 
       return steamLib.fetchPriceDetail(w.appid).catch(function () { return null; });
     }));
     results.forEach(function (r) { if (r && r.discountPercent > 0) deals.push(r); });
+    if (i + CHUNK < wishlist.length) {
+      await new Promise(function (res) { setTimeout(res, 800); });
+    }
   }
   await interaction.editReply(buildWishlistDealsEmbed(deals));
 }

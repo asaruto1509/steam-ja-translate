@@ -4,6 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
+User=opc
+Group=opc
 WorkingDirectory=/home/opc/steam-ja-translate/bot
 EnvironmentFile=/home/opc/steam-ja-translate/bot/.env
 ExecStart=/usr/bin/node index.js
