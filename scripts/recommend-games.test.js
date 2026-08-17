@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { pickRandomGames, pickAnalyzableGames, parseGameAnalysis, buildRecommendEmbeds } = require('./recommend-games.js');
+const { pickRandomGames, pickAnalyzableGames, parseGameAnalysis, buildRecommendEmbeds, buildHeaderEmbed } = require('./recommend-games.js');
 
 test('pickRandomGames returns exactly n items from a larger pool', () => {
   const pool = [
@@ -106,11 +106,23 @@ test('buildRecommendEmbeds includes all analysis fields when analysis succeeded'
   const embeds = buildRecommendEmbeds(games);
   assert.equal(embeds.length, 1);
   assert.equal(embeds[0].title, 'Test Game');
-  assert.equal(embeds[0].thumbnail.url, 'https://example.com/img.jpg');
+  assert.equal(embeds[0].image.url, 'https://example.com/img.jpg');
+  assert.match(embeds[0].description, /買い/);
+  assert.match(embeds[0].description, /面白い/);
+  assert.equal(embeds[0].color, 0x2ecc71);
   const fieldNames = embeds[0].fields.map((f) => f.name);
-  assert.ok(fieldNames.includes('AI判定'));
   assert.ok(fieldNames.includes('👍 良い点'));
   assert.ok(fieldNames.includes('⚠ 懸念'));
+});
+
+test('buildRecommendEmbeds sets footer index out of the full batch', () => {
+  const games = [
+    { id: '1', name: 'A', finalPrice: 100, originalPrice: 100, discountPercent: 0, image: 'a', analysis: null },
+    { id: '2', name: 'B', finalPrice: 100, originalPrice: 100, discountPercent: 0, image: 'b', analysis: null }
+  ];
+  const embeds = buildRecommendEmbeds(games);
+  assert.equal(embeds[0].footer.text, '本日のおすすめ 1/2');
+  assert.equal(embeds[1].footer.text, '本日のおすすめ 2/2');
 });
 
 test('buildRecommendEmbeds degrades to a price-only embed when analysis is null', () => {
@@ -144,4 +156,11 @@ test('buildRecommendEmbeds preserves game order and count across multiple games'
   assert.equal(embeds.length, 2);
   assert.equal(embeds[0].title, 'First');
   assert.equal(embeds[1].title, 'Second');
+});
+
+test('buildHeaderEmbed includes the pick count and a formatted date', () => {
+  const embed = buildHeaderEmbed(5, new Date(2026, 7, 17));
+  assert.match(embed.description, /5本/);
+  assert.match(embed.description, /2026\/8\/17/);
+  assert.equal(embed.title, '🎮 今日のおすすめゲーム');
 });

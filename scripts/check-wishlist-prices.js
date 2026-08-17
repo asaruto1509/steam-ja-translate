@@ -40,7 +40,7 @@ function buildDiscordEmbed(drops, verdictMap) {
       title: '💰 ' + d.name + ' が値下げされました',
       url: 'https://store.steampowered.com/app/' + d.id + '/',
       color: 0x4caf50,
-      thumbnail: { url: 'https://cdn.akamai.steamstatic.com/steam/apps/' + d.id + '/header.jpg' },
+      image: { url: 'https://cdn.akamai.steamstatic.com/steam/apps/' + d.id + '/header.jpg' },
       fields: [
         { name: '価格', value: '~~¥' + d.prevPrice.toLocaleString() + '~~ → **¥' + d.price.toLocaleString() + '**', inline: true },
         { name: '割引率', value: '-' + d.dropPct + '%', inline: true }
@@ -145,13 +145,22 @@ async function fetchVerdict(gameName, reviewTexts, apiKey) {
   return parseVerdictLabel(text);
 }
 
+// 通知の送信元アイコン。ボタン等の対話コンポーネントはComponents V2必須でembedと共存できないため見送り、
+// ブランディングと誤爆メンション対策のみをwebhook送信時に付与する。
+var STEAM_ICON_URL = 'https://store.steampowered.com/favicon.ico';
+
 async function sendDiscordNotification(embed, webhookUrl) {
   embed.footer = embed.footer || { text: 'Steam Japanese Translator (Cron)' };
   embed.timestamp = new Date().toISOString();
   var r = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ embeds: [embed] })
+    body: JSON.stringify({
+      username: 'Steam値下げ通知',
+      avatar_url: STEAM_ICON_URL,
+      allowed_mentions: { parse: [] },
+      embeds: [embed]
+    })
   });
   if (!r.ok) throw new Error('Discord webhook送信に失敗しました(' + r.status + ')');
 }

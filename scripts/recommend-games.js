@@ -79,10 +79,17 @@ function parseGameAnalysis(text) {
   return { verdict: verdict, reason: reason, good: good, concern: concern };
 }
 
+// 値下げ通知(check-wishlist-prices.js)のVERDICT_EMOJIと同じ絵文字を使い、見た目の一貫性を保つ。
+// 色はverdictごとに変えてカードを一目で識別しやすくする。AI分析なし(価格onlyカード)は既定の水色のまま。
+var VERDICT_EMOJI = { '今すぐ買い': '🔥', '買い': '✅', 'セール待ち': '⏳', '人を選ぶ': '🤔', '見送り': '⛔' };
+var VERDICT_COLOR = { '今すぐ買い': 0xe74c3c, '買い': 0x2ecc71, 'セール待ち': 0xf1c40f, '人を選ぶ': 0x9b59b6, '見送り': 0x7f8c8d };
+var DEFAULT_COLOR = 0x66c0f4;
+
 // AI分析が失敗した場合(analysisがnull)でも、価格情報だけの簡易embedとして必ず1件は出す
 // (5本中1本もAI分析が成功しなかった場合でも「紹介自体はする」という設計方針)。
 function buildRecommendEmbeds(games) {
-  return games.map(function (g) {
+  var total = games.length;
+  return games.map(function (g, idx) {
     var priceLine = g.finalPrice === 0
       ? '無料'
       : g.discountPercent > 0
@@ -91,22 +98,40 @@ function buildRecommendEmbeds(games) {
     var fields = [{ name: '価格', value: priceLine, inline: true }];
 
     var a = g.analysis;
-    if (a && a.verdict) fields.push({ name: 'AI判定', value: a.verdict, inline: true });
-    if (a && a.reason) fields.push({ name: '理由', value: a.reason, inline: false });
-    if (a && a.good && a.good.length) {
-      fields.push({ name: '👍 良い点', value: a.good.map(function (x) { return '・' + x; }).join('\n'), inline: true });
+    var description = null;
+    var color = DEFAULT_COLOR;
+    if (a && a.verdict) {
+      var emoji = VERDICT_EMOJI[a.verdict] || '▪';
+      description = emoji + ' **' + a.verdict + '**' + (a.reason ? '\n' + a.reason : '');
+      color = VERDICT_COLOR[a.verdict] || DEFAULT_COLOR;
+      if (a.good && a.good.length) {
+        fields.push({ name: '👍 良い点', value: a.good.map(function (x) { return '・' + x; }).join('\n'), inline: true });
+      }
+      if (a.concern) fields.push({ name: '⚠ 懸念', value: a.concern, inline: true });
     }
-    if (a && a.concern) fields.push({ name: '⚠ 懸念', value: a.concern, inline: true });
 
     var embed = {
       title: g.name,
       url: 'https://store.steampowered.com/app/' + g.id + '/',
-      color: 0x66c0f4,
-      fields: fields
+      color: color,
+      fields: fields,
+      footer: { text: '本日のおすすめ ' + (idx + 1) + '/' + total }
     };
-    if (g.image) embed.thumbnail = { url: g.image };
+    if (description) embed.description = description;
+    if (g.image) embed.image = { url: g.image };
     return embed;
   });
+}
+
+// メッセージ先頭に添える見出し用embed(素のcontentテキストの代わり)。
+function buildHeaderEmbed(count, date) {
+  var d = date || new Date();
+  var dateStr = d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
+  return {
+    title: '🎮 今日のおすすめゲーム',
+    description: dateStr + ' のピックアップ ' + count + '本',
+    color: 0x1b2838
+  };
 }
 
 async function fetchFeaturedPool() {
@@ -171,11 +196,20 @@ async function fetchGameAnalysis(gameName, reviewTexts, apiKey) {
   return parseGameAnalysis(text);
 }
 
+// 通知の送信元アイコン。ボタン等の対話コンポーネントはComponents V2必須でembedと共存できないため見送り、
+// ブランディングと誤爆メンション対策のみをwebhook送信時に付与する。
+var STEAM_ICON_URL = 'https://store.steampowered.com/favicon.ico';
+
 async function sendDiscordEmbeds(embeds, webhookUrl) {
   var r = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: '🎮 今日のおすすめゲーム', embeds: embeds })
+    body: JSON.stringify({
+      username: 'Steam日替わりおすすめ',
+      avatar_url: STEAM_ICON_URL,
+      allowed_mentions: { parse: [] },
+      embeds: embeds
+    })
   });
   if (!r.ok) throw new Error('Discord webhook送信に失敗しました(' + r.status + ')');
 }
@@ -231,7 +265,7 @@ async function main() {
   }
   console.log('AI分析成功: ' + analyzedCount + '/' + picked.length);
 
-  var embeds = buildRecommendEmbeds(picked);
+  var embeds = [buildHeaderEmbed(picked.length)].concat(buildRecommendEmbeds(picked));
   await sendDiscordEmbeds(embeds, webhookUrl);
   console.log('Discord通知を送信しました');
 }
@@ -248,6 +282,7 @@ module.exports = {
   pickAnalyzableGames: pickAnalyzableGames,
   parseGameAnalysis: parseGameAnalysis,
   buildRecommendEmbeds: buildRecommendEmbeds,
+  buildHeaderEmbed: buildHeaderEmbed,
   fetchFeaturedPool: fetchFeaturedPool,
   fetchGameAnalysis: fetchGameAnalysis,
   sendDiscordEmbeds: sendDiscordEmbeds,
