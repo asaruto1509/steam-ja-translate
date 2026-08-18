@@ -29,7 +29,7 @@ async function fetchPriceDetail(appid) {
   var info = d && d[appid] && d[appid].data;
   if (!info) return null;
   var po = info.price_overview;
-  if (!po) return { id: String(appid), name: info.name, finalPrice: 0, originalPrice: 0, discountPercent: 0 };
+  if (!po) return { id: String(appid), name: info.name, finalPrice: 0, originalPrice: 0, discountPercent: 0, shortDescription: info.short_description || null };
   // 一部タイトルはcc=jp指定でも円建て価格が無くドル等のまま返ってくることがあるため、
   // 通貨がJPYでなければ「価格取得不可」として扱う(誤った円換算表示を避ける)。
   if (po.currency !== 'JPY') return null;
@@ -38,7 +38,8 @@ async function fetchPriceDetail(appid) {
     name: info.name,
     finalPrice: Math.floor(po.final / 100),
     originalPrice: Math.floor(po.initial / 100),
-    discountPercent: po.discount_percent || 0
+    discountPercent: po.discount_percent || 0,
+    shortDescription: info.short_description || null
   };
 }
 

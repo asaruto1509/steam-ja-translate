@@ -38,13 +38,17 @@ function extractGameMentions(text, maxCount) {
 // メッセージ本文にURLを生で貼るとDiscordが英語/ドル建てのOGPプレビューを勝手に展開してしまうため、
 // 自前でEmbed(円建て価格・画像・リンク)を作って添付する。本文にはURLを含めない。
 function buildMentionEmbed(game, priceDetail) {
-  return {
+  var embed = {
     title: game.name,
     url: steamLib.storeUrl(game.id),
     color: 0x66c0f4,
     image: { url: steamLib.headerImageUrl(game.id) },
     fields: [{ name: '価格', value: priceFormat.formatPriceLine(priceDetail), inline: true }]
   };
+  if (priceDetail && priceDetail.shortDescription) {
+    embed.description = priceDetail.shortDescription;
+  }
+  return embed;
 }
 
 async function fetchChatReply(prompt, apiKey, options) {

@@ -66,6 +66,17 @@ test('buildMentionEmbed builds a JPY-priced embed with image and store link (no 
   assert.match(embed.fields[0].value, /¥1,000/);
 });
 
+test('buildMentionEmbed includes the store short description when available', () => {
+  const detail = { finalPrice: 1000, originalPrice: 1000, discountPercent: 0, shortDescription: '洞窟の奥深くを探索するメトロイドヴァニア。' };
+  const embed = buildMentionEmbed({ id: '367520', name: 'Hollow Knight' }, detail);
+  assert.match(embed.description, /メトロイドヴァニア/);
+});
+
+test('buildMentionEmbed omits the description field when no short description is available', () => {
+  const embed = buildMentionEmbed({ id: '1', name: 'Some Game' }, { finalPrice: 0, originalPrice: 0, discountPercent: 0 });
+  assert.equal(embed.description, undefined);
+});
+
 test('buildMentionEmbed shows a fallback price line when the price detail is unavailable', () => {
   const embed = buildMentionEmbed({ id: '1', name: 'Some Game' }, null);
   assert.match(embed.fields[0].value, /価格情報なし/);
