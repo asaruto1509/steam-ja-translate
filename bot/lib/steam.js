@@ -94,6 +94,19 @@ async function fetchGameContext(appid) {
   };
 }
 
+// /news用。キー不要の公開Steam Web API。BBCode/HTMLタグは簡易除去してAIに渡す。
+async function fetchLatestNews(appid) {
+  var r = await fetch('https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=' + appid + '&count=1&maxlength=3000');
+  if (!r.ok) return null;
+  var d = await r.json();
+  var items = d.appnews && d.appnews.newsitems;
+  if (!items || !items.length) return null;
+  var it = items[0];
+  var contents = (it.contents || '').replace(/\[[^\]]*\]/g, '').replace(/<[^>]*>/g, '').trim();
+  if (!contents) return null;
+  return { title: it.title, url: it.url, date: it.date, contents: contents };
+}
+
 function headerImageUrl(appid) {
   return 'https://cdn.akamai.steamstatic.com/steam/apps/' + appid + '/header.jpg';
 }
@@ -110,6 +123,7 @@ module.exports = {
   fetchPlayerCount: fetchPlayerCount,
   fetchAchievementStats: fetchAchievementStats,
   fetchGameContext: fetchGameContext,
+  fetchLatestNews: fetchLatestNews,
   headerImageUrl: headerImageUrl,
   storeUrl: storeUrl
 };

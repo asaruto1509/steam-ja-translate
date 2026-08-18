@@ -11,6 +11,8 @@ var wishlistCommand = require('./commands/wishlist.js');
 var recommendCommand = require('./commands/recommend.js');
 var askCommand = require('./commands/ask.js');
 var statsCommand = require('./commands/stats.js');
+var newsCommand = require('./commands/news.js');
+var compareCommand = require('./commands/compare.js');
 var autocomplete = require('./lib/autocomplete.js');
 
 var token = process.env.DISCORD_BOT_TOKEN;
@@ -35,7 +37,12 @@ var commands = [
     .addStringOption(function (opt) { return opt.setName('game').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
     .addStringOption(function (opt) { return opt.setName('question').setDescription('質問内容').setRequired(true); }),
   new SlashCommandBuilder().setName('stats').setDescription('現在の同時接続数と実績統計を調べる')
-    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
+  new SlashCommandBuilder().setName('news').setDescription('最新アップデート情報をAIが要約')
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
+  new SlashCommandBuilder().setName('compare').setDescription('2本のゲームをAIが比較')
+    .addStringOption(function (opt) { return opt.setName('game_a').setDescription('ゲーム名A').setRequired(true).setAutocomplete(true); })
+    .addStringOption(function (opt) { return opt.setName('game_b').setDescription('ゲーム名B').setRequired(true).setAutocomplete(true); })
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
@@ -119,6 +126,21 @@ client.on(Events.InteractionCreate, function (interaction) {
         searchGame: steamLib.searchGame,
         fetchPlayerCount: steamLib.fetchPlayerCount,
         fetchAchievementStats: steamLib.fetchAchievementStats
+      });
+    },
+    news: function () {
+      return newsCommand.handleNewsCommand(interaction, {
+        searchGame: steamLib.searchGame,
+        fetchLatestNews: steamLib.fetchLatestNews,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    compare: function () {
+      return compareCommand.handleCompareCommand(interaction, {
+        searchGame: steamLib.searchGame,
+        fetchPriceDetail: steamLib.fetchPriceDetail,
+        fetchReviewSummary: steamLib.fetchReviewSummary,
+        fetchChatReply: chat.fetchChatReply
       });
     }
   };
