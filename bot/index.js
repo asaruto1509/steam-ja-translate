@@ -9,6 +9,7 @@ var priceCommand = require('./commands/price.js');
 var reviewCommand = require('./commands/review.js');
 var wishlistCommand = require('./commands/wishlist.js');
 var recommendCommand = require('./commands/recommend.js');
+var askCommand = require('./commands/ask.js');
 
 var token = process.env.DISCORD_BOT_TOKEN;
 var clientId = process.env.DISCORD_CLIENT_ID;
@@ -27,7 +28,10 @@ var commands = [
   new SlashCommandBuilder().setName('review').setDescription('レビューをAIが要約して買い判断を返す')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true); }),
   new SlashCommandBuilder().setName('wishlist').setDescription('ウィッシュリストの値下げ中タイトルを表示'),
-  new SlashCommandBuilder().setName('recommend').setDescription('その場でAIおすすめゲームを紹介')
+  new SlashCommandBuilder().setName('recommend').setDescription('その場でAIおすすめゲームを紹介'),
+  new SlashCommandBuilder().setName('ask').setDescription('ゲームについてAIに質問する(Web検索あり)')
+    .addStringOption(function (opt) { return opt.setName('game').setDescription('ゲーム名').setRequired(true); })
+    .addStringOption(function (opt) { return opt.setName('question').setDescription('質問内容').setRequired(true); })
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
@@ -84,6 +88,9 @@ client.on(Events.InteractionCreate, function (interaction) {
         buildHeaderEmbed: recommendGames.buildHeaderEmbed,
         buildRecommendEmbeds: recommendGames.buildRecommendEmbeds
       });
+    },
+    ask: function () {
+      return askCommand.handleAskCommand(interaction, { fetchChatReply: chat.fetchChatReply, apiKey: apiKey });
     }
   };
   var handler = handlers[interaction.commandName];

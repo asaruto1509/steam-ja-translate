@@ -21,11 +21,12 @@ function buildChatPrompt(historyEntries, newMessage) {
     + '会話:\n' + lines.join('\n') + '\nBot:';
 }
 
-async function fetchChatReply(prompt, apiKey) {
+async function fetchChatReply(prompt, apiKey, options) {
+  var webSearch = (options && options.webSearch) || false;
   var body = {
     type: 'UNIFY_CHAT_WITH_AI',
     model: 'qwen3-8b',
-    promptObject: { prompt: prompt, settings: { historySettings: { isMixed: false, historyMessageLimit: 0 }, webSearchSettings: { webSearch: false } } }
+    promptObject: { prompt: prompt, settings: { historySettings: { isMixed: false, historyMessageLimit: 0 }, webSearchSettings: { webSearch: webSearch } } }
   };
   var r = await fetch('https://api.1min.ai/api/chat-with-ai', {
     method: 'POST',
