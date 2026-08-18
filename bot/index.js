@@ -18,6 +18,9 @@ var gachaCommand = require('./commands/gacha.js');
 var upcomingCommand = require('./commands/upcoming.js');
 var quizCommand = require('./commands/quiz.js');
 var moodCommand = require('./commands/mood.js');
+var hiddenGemCommand = require('./commands/hiddengem.js');
+var challengeCommand = require('./commands/challenge.js');
+var mashupCommand = require('./commands/mashup.js');
 var autocomplete = require('./lib/autocomplete.js');
 
 var token = process.env.DISCORD_BOT_TOKEN;
@@ -53,7 +56,13 @@ var commands = [
   new SlashCommandBuilder().setName('upcoming').setDescription('近日リリース予定のタイトルを紹介'),
   new SlashCommandBuilder().setName('quiz').setDescription('ヒントからゲームを当てるクイズを出題'),
   new SlashCommandBuilder().setName('mood').setDescription('今の気分に合うゲームをAIが探す')
-    .addStringOption(function (opt) { return opt.setName('query').setDescription('気分・要望(例: まったり農業したい)').setRequired(true); })
+    .addStringOption(function (opt) { return opt.setName('query').setDescription('気分・要望(例: まったり農業したい)').setRequired(true); }),
+  new SlashCommandBuilder().setName('hiddengem').setDescription('高評価なのに過疎ってる隠れた名作を発掘'),
+  new SlashCommandBuilder().setName('challenge').setDescription('レア実績を使った縛りプレイ企画をAIが提案')
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
+  new SlashCommandBuilder().setName('mashup').setDescription('2つのジャンルを掛け合わせたゲームを探す')
+    .addStringOption(function (opt) { return opt.setName('genre_a').setDescription('ジャンル1').setRequired(true); })
+    .addStringOption(function (opt) { return opt.setName('genre_b').setDescription('ジャンル2').setRequired(true); })
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
@@ -185,6 +194,27 @@ client.on(Events.InteractionCreate, function (interaction) {
     },
     mood: function () {
       return moodCommand.handleMoodCommand(interaction, {
+        searchGame: steamLib.searchGame,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    hiddengem: function () {
+      return hiddenGemCommand.handleHiddenGemCommand(interaction, {
+        fetchFeaturedPool: recommendGames.fetchFeaturedPool,
+        fetchReviewSummary: steamLib.fetchReviewSummary,
+        fetchPlayerCount: steamLib.fetchPlayerCount,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    challenge: function () {
+      return challengeCommand.handleChallengeCommand(interaction, {
+        searchGame: steamLib.searchGame,
+        fetchRareAchievements: steamLib.fetchRareAchievements,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    mashup: function () {
+      return mashupCommand.handleMashupCommand(interaction, {
         searchGame: steamLib.searchGame,
         fetchChatReply: chat.fetchChatReply
       });

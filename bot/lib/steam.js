@@ -137,6 +137,19 @@ async function fetchUpcomingPool() {
     .map(function (it) { return { id: String(it.id), name: it.name }; });
 }
 
+// /challenge用。fetchAchievementStatsと同じAPIから、レア実績を複数件返す。
+async function fetchRareAchievements(appid, count) {
+  var r = await fetch('https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?gameid=' + appid);
+  if (!r.ok) return [];
+  var d = await r.json();
+  var list = d.achievementpercentages && d.achievementpercentages.achievements;
+  if (!list || !list.length) return [];
+  return list
+    .map(function (a) { return { name: a.name, percent: parseFloat(a.percent) }; })
+    .sort(function (a, b) { return a.percent - b.percent; })
+    .slice(0, count);
+}
+
 function headerImageUrl(appid) {
   return 'https://cdn.akamai.steamstatic.com/steam/apps/' + appid + '/header.jpg';
 }
@@ -156,6 +169,7 @@ module.exports = {
   fetchLatestNews: fetchLatestNews,
   fetchSpecialsPool: fetchSpecialsPool,
   fetchUpcomingPool: fetchUpcomingPool,
+  fetchRareAchievements: fetchRareAchievements,
   headerImageUrl: headerImageUrl,
   storeUrl: storeUrl
 };
