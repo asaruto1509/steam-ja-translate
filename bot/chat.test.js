@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { appendHistory, buildChatPrompt, extractGameMentions, buildMentionEmbed } = require('./chat.js');
+const { appendHistory, buildChatPrompt, extractGameMentions, buildMentionEmbed, needsTranslation, buildTranslatePrompt } = require('./chat.js');
 
 test('appendHistory adds an entry and keeps existing channels untouched', () => {
   const history = { 'other-channel': [{ author: 'X', text: 'hi' }] };
@@ -75,6 +75,24 @@ test('buildMentionEmbed includes the store short description when available', ()
 test('buildMentionEmbed omits the description field when no short description is available', () => {
   const embed = buildMentionEmbed({ id: '1', name: 'Some Game' }, { finalPrice: 0, originalPrice: 0, discountPercent: 0 });
   assert.equal(embed.description, undefined);
+});
+
+test('needsTranslation is true for text with no Japanese characters', () => {
+  assert.equal(needsTranslation('Money Talks. Silence Pays.'), true);
+});
+
+test('needsTranslation is false for text that already contains Japanese', () => {
+  assert.equal(needsTranslation('洞窟を探索するアクション'), false);
+});
+
+test('needsTranslation is false for empty or missing text', () => {
+  assert.equal(needsTranslation(''), false);
+  assert.equal(needsTranslation(null), false);
+});
+
+test('buildTranslatePrompt includes the source text', () => {
+  const prompt = buildTranslatePrompt('Money Talks. Silence Pays.');
+  assert.match(prompt, /Money Talks/);
 });
 
 test('buildMentionEmbed shows a fallback price line when the price detail is unavailable', () => {

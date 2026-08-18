@@ -51,6 +51,18 @@ function buildMentionEmbed(game, priceDetail) {
   return embed;
 }
 
+// Steamの一部タイトルはl=japanese指定でも日本語紹介文が用意されておらず英語のまま返ってくるため、
+// (このプロジェクト自体がSteam日本語化ツールなので)日本語が含まれていなければAI翻訳にかける。
+var JAPANESE_CHAR_RE = /[぀-ヿ一-鿿]/;
+
+function needsTranslation(text) {
+  return !!text && !JAPANESE_CHAR_RE.test(text);
+}
+
+function buildTranslatePrompt(text) {
+  return '次の英語のSteamゲーム紹介文を、自然な日本語に1〜2文で要約翻訳してください。翻訳文以外は出力しないでください。\n\n' + text;
+}
+
 async function fetchChatReply(prompt, apiKey, options) {
   var webSearch = (options && options.webSearch) || false;
   var body = {
@@ -91,6 +103,12 @@ async function handleChatMessage(message, historyStore, apiKey, options) {
         var found = await options.searchGame(mentions[i]);
         if (!found) continue;
         var detail = await options.fetchPriceDetail(found.id);
+        if (detail && needsTranslation(detail.shortDescription)) {
+          try {
+            var translated = await fetchChatReply(buildTranslatePrompt(detail.shortDescription), apiKey, { webSearch: false });
+            if (translated) detail = Object.assign({}, detail, { shortDescription: translated });
+          } catch (e) { /* 翻訳失敗時は英語のまま表示 */ }
+        }
         embeds.push(buildMentionEmbed(found, detail));
       }
     }
@@ -110,6 +128,8 @@ module.exports = {
   buildChatPrompt: buildChatPrompt,
   extractGameMentions: extractGameMentions,
   buildMentionEmbed: buildMentionEmbed,
+  needsTranslation: needsTranslation,
+  buildTranslatePrompt: buildTranslatePrompt,
   fetchChatReply: fetchChatReply,
   handleChatMessage: handleChatMessage
 };
