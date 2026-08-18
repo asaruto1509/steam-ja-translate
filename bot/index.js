@@ -95,7 +95,7 @@ client.on(Events.MessageCreate, function (message) {
   var isChatChannel = !!chatChannelId && message.channelId === chatChannelId;
   var isAskThread = askThreadIds.has(message.channelId);
   if (!isChatChannel && !isAskThread) return;
-  chat.handleChatMessage(message, historyStore, apiKey, { webSearch: isAskThread }).catch(function (e) {
+  chat.handleChatMessage(message, historyStore, apiKey, { webSearch: isAskThread, searchGame: steamLib.searchGame }).catch(function (e) {
     console.error('チャット処理でエラー: ' + e.message);
   });
 });

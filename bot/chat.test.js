@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { appendHistory, buildChatPrompt } = require('./chat.js');
+const { appendHistory, buildChatPrompt, extractGameMentions, appendGameLinks } = require('./chat.js');
 
 test('appendHistory adds an entry and keeps existing channels untouched', () => {
   const history = { 'other-channel': [{ author: 'X', text: 'hi' }] };
@@ -35,4 +35,36 @@ test('buildChatPrompt includes prior history lines and the new message', () => {
 test('buildChatPrompt works with empty history', () => {
   const prompt = buildChatPrompt([], 'こんにちは');
   assert.match(prompt, /こんにちは/);
+});
+
+test('extractGameMentions pulls unique bracketed titles from text', () => {
+  const mentions = extractGameMentions('似てるゲームだと「Hollow Knight」とか「Celeste」がおすすめ。「Hollow Knight」は特に。');
+  assert.deepEqual(mentions, ['Hollow Knight', 'Celeste']);
+});
+
+test('extractGameMentions returns an empty array when there are no brackets', () => {
+  assert.deepEqual(extractGameMentions('普通の返答だよ'), []);
+});
+
+test('extractGameMentions caps the number of mentions returned', () => {
+  const text = '「A」「B」「C」「D」';
+  assert.equal(extractGameMentions(text, 2).length, 2);
+});
+
+test('appendGameLinks appends a Steam link line for each matched game', () => {
+  const result = appendGameLinks('面白いよ', [{ name: 'Hollow Knight', id: '367520' }]);
+  assert.match(result, /面白いよ/);
+  assert.match(result, /Hollow Knight/);
+  assert.match(result, /https:\/\/store\.steampowered\.com\/app\/367520\//);
+});
+
+test('appendGameLinks returns the original text unchanged when there are no matches', () => {
+  assert.equal(appendGameLinks('面白いよ', []), '面白いよ');
+});
+
+test('appendGameLinks keeps the total length within the Discord message cap', () => {
+  const longText = 'あ'.repeat(1990);
+  const games = [{ name: 'Hollow Knight', id: '367520' }];
+  const result = appendGameLinks(longText, games, 2000);
+  assert.ok(result.length <= 2000);
 });
