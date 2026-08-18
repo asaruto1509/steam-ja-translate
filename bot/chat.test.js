@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { appendHistory, buildChatPrompt, extractGameMentions, appendGameLinks } = require('./chat.js');
+const { appendHistory, buildChatPrompt, extractGameMentions, buildMentionEmbed } = require('./chat.js');
 
 test('appendHistory adds an entry and keeps existing channels untouched', () => {
   const history = { 'other-channel': [{ author: 'X', text: 'hi' }] };
@@ -56,20 +56,17 @@ test('extractGameMentions caps the number of mentions returned', () => {
   assert.equal(extractGameMentions(text, 2).length, 2);
 });
 
-test('appendGameLinks appends a Steam link line for each matched game', () => {
-  const result = appendGameLinks('面白いよ', [{ name: 'Hollow Knight', id: '367520' }]);
-  assert.match(result, /面白いよ/);
-  assert.match(result, /Hollow Knight/);
-  assert.match(result, /https:\/\/store\.steampowered\.com\/app\/367520\//);
+test('buildMentionEmbed builds a JPY-priced embed with image and store link (no bare URL in text, so Discord will not auto-unfurl an English/USD preview)', () => {
+  const game = { id: '367520', name: 'Hollow Knight' };
+  const detail = { finalPrice: 1000, originalPrice: 1000, discountPercent: 0 };
+  const embed = buildMentionEmbed(game, detail);
+  assert.equal(embed.title, 'Hollow Knight');
+  assert.equal(embed.url, 'https://store.steampowered.com/app/367520/');
+  assert.equal(embed.image.url, 'https://cdn.akamai.steamstatic.com/steam/apps/367520/header.jpg');
+  assert.match(embed.fields[0].value, /¥1,000/);
 });
 
-test('appendGameLinks returns the original text unchanged when there are no matches', () => {
-  assert.equal(appendGameLinks('面白いよ', []), '面白いよ');
-});
-
-test('appendGameLinks keeps the total length within the Discord message cap', () => {
-  const longText = 'あ'.repeat(1990);
-  const games = [{ name: 'Hollow Knight', id: '367520' }];
-  const result = appendGameLinks(longText, games, 2000);
-  assert.ok(result.length <= 2000);
+test('buildMentionEmbed shows a fallback price line when the price detail is unavailable', () => {
+  const embed = buildMentionEmbed({ id: '1', name: 'Some Game' }, null);
+  assert.match(embed.fields[0].value, /価格情報なし/);
 });

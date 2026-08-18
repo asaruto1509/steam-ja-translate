@@ -1,15 +1,12 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var priceFormat = require('../lib/priceFormat.js');
 
 function formatPriceReply(gameName, detail) {
   if (!detail) {
     return { content: '「' + gameName + '」が見つからなかった…' };
   }
-  var priceLine = detail.finalPrice === 0
-    ? '無料'
-    : detail.discountPercent > 0
-      ? '~~¥' + detail.originalPrice.toLocaleString() + '~~ → **¥' + detail.finalPrice.toLocaleString() + '** (-' + detail.discountPercent + '%)'
-      : '¥' + detail.finalPrice.toLocaleString();
+  var priceLine = priceFormat.formatPriceLine(detail);
   return {
     embeds: [{
       title: detail.name,

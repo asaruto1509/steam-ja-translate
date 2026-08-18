@@ -1,4 +1,6 @@
 'use strict';
+var steamLib = require('./lib/steam.js');
+var priceFormat = require('./lib/priceFormat.js');
 
 var MAX_HISTORY = 6;
 
@@ -33,15 +35,16 @@ function extractGameMentions(text, maxCount) {
   return seen;
 }
 
-function appendGameLinks(replyText, games, maxLen) {
-  maxLen = maxLen || 2000;
-  if (!games || !games.length) return replyText;
-  var linkLines = games.map(function (g) {
-    return '🔗 ' + g.name + ': https://store.steampowered.com/app/' + g.id + '/';
-  }).join('\n');
-  var suffix = '\n\n' + linkLines;
-  var base = replyText.slice(0, Math.max(0, maxLen - suffix.length));
-  return (base + suffix).slice(0, maxLen);
+// メッセージ本文にURLを生で貼るとDiscordが英語/ドル建てのOGPプレビューを勝手に展開してしまうため、
+// 自前でEmbed(円建て価格・画像・リンク)を作って添付する。本文にはURLを含めない。
+function buildMentionEmbed(game, priceDetail) {
+  return {
+    title: game.name,
+    url: steamLib.storeUrl(game.id),
+    color: 0x66c0f4,
+    image: { url: steamLib.headerImageUrl(game.id) },
+    fields: [{ name: '価格', value: priceFormat.formatPriceLine(priceDetail), inline: true }]
+  };
 }
 
 async function fetchChatReply(prompt, apiKey, options) {
@@ -76,17 +79,18 @@ async function handleChatMessage(message, historyStore, apiKey, options) {
   }, 8000);
   try {
     var reply = await fetchChatReply(prompt, apiKey, options);
-    var baseText = reply || 'うまく返答を生成できなかった…';
-    var games = [];
-    if (options && options.searchGame) {
-      var mentions = extractGameMentions(baseText, 3);
+    var replyText = (reply || 'うまく返答を生成できなかった…').slice(0, 2000);
+    var embeds = [];
+    if (options && options.searchGame && options.fetchPriceDetail) {
+      var mentions = extractGameMentions(replyText, 3);
       for (var i = 0; i < mentions.length; i++) {
         var found = await options.searchGame(mentions[i]);
-        if (found) games.push(found);
+        if (!found) continue;
+        var detail = await options.fetchPriceDetail(found.id);
+        embeds.push(buildMentionEmbed(found, detail));
       }
     }
-    var replyText = appendGameLinks(baseText.slice(0, 2000), games, 2000);
-    await message.channel.send(replyText);
+    await message.channel.send(embeds.length ? { content: replyText, embeds: embeds } : replyText);
     historyStore.data = appendHistory(historyStore.data, channelId, { author: 'Bot', text: replyText }, MAX_HISTORY);
   } catch (e) {
     console.error('チャット応答生成に失敗しました: ' + e.message);
@@ -101,7 +105,7 @@ module.exports = {
   appendHistory: appendHistory,
   buildChatPrompt: buildChatPrompt,
   extractGameMentions: extractGameMentions,
-  appendGameLinks: appendGameLinks,
+  buildMentionEmbed: buildMentionEmbed,
   fetchChatReply: fetchChatReply,
   handleChatMessage: handleChatMessage
 };
