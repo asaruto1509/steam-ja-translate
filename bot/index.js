@@ -10,6 +10,7 @@ var reviewCommand = require('./commands/review.js');
 var wishlistCommand = require('./commands/wishlist.js');
 var recommendCommand = require('./commands/recommend.js');
 var askCommand = require('./commands/ask.js');
+var autocomplete = require('./lib/autocomplete.js');
 
 var token = process.env.DISCORD_BOT_TOKEN;
 var clientId = process.env.DISCORD_CLIENT_ID;
@@ -24,17 +25,18 @@ if (!token || !clientId) {
 
 var commands = [
   new SlashCommandBuilder().setName('price').setDescription('Steamゲームの現在価格を調べる')
-    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true); }),
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('review').setDescription('レビューをAIが要約して買い判断を返す')
-    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true); }),
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('wishlist').setDescription('ウィッシュリストの値下げ中タイトルを表示'),
   new SlashCommandBuilder().setName('recommend').setDescription('その場でAIおすすめゲームを紹介'),
   new SlashCommandBuilder().setName('ask').setDescription('ゲームについてAIに質問する(Web検索あり)')
-    .addStringOption(function (opt) { return opt.setName('game').setDescription('ゲーム名').setRequired(true); })
+    .addStringOption(function (opt) { return opt.setName('game').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
     .addStringOption(function (opt) { return opt.setName('question').setDescription('質問内容').setRequired(true); })
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
+var askThreadIds = new Set();
 
 var client = new Client({
   intents: [
@@ -59,13 +61,21 @@ client.once(Events.ClientReady, async function () {
 
 client.on(Events.MessageCreate, function (message) {
   if (message.author.bot) return;
-  if (!chatChannelId || message.channelId !== chatChannelId) return;
-  chat.handleChatMessage(message, historyStore, apiKey).catch(function (e) {
+  var isChatChannel = !!chatChannelId && message.channelId === chatChannelId;
+  var isAskThread = askThreadIds.has(message.channelId);
+  if (!isChatChannel && !isAskThread) return;
+  chat.handleChatMessage(message, historyStore, apiKey, { webSearch: isAskThread }).catch(function (e) {
     console.error('チャット処理でエラー: ' + e.message);
   });
 });
 
 client.on(Events.InteractionCreate, function (interaction) {
+  if (interaction.isAutocomplete()) {
+    autocomplete.handleGameNameAutocomplete(interaction, steamLib).catch(function (e) {
+      console.error('オートコンプリート処理でエラー: ' + e.message);
+    });
+    return;
+  }
   if (!interaction.isChatInputCommand()) return;
   var handlers = {
     price: function () { return priceCommand.handlePriceCommand(interaction, steamLib); },
@@ -90,7 +100,13 @@ client.on(Events.InteractionCreate, function (interaction) {
       });
     },
     ask: function () {
-      return askCommand.handleAskCommand(interaction, { fetchChatReply: chat.fetchChatReply, apiKey: apiKey });
+      return askCommand.handleAskCommand(interaction, {
+        fetchChatReply: chat.fetchChatReply,
+        apiKey: apiKey,
+        appendHistory: chat.appendHistory,
+        historyStore: historyStore,
+        askThreadIds: askThreadIds
+      });
     }
   };
   var handler = handlers[interaction.commandName];

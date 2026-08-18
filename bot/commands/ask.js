@@ -21,6 +21,11 @@ function formatAskReply(gameName, question, answer) {
   };
 }
 
+function buildThreadName(gameName) {
+  var suffix = ' について';
+  return gameName.slice(0, 100 - suffix.length) + suffix;
+}
+
 async function handleAskCommand(interaction, deps) {
   var gameName = interaction.options.getString('game');
   var question = interaction.options.getString('question');
@@ -28,10 +33,22 @@ async function handleAskCommand(interaction, deps) {
   var prompt = buildAskPrompt(gameName, question);
   var answer = await deps.fetchChatReply(prompt, deps.apiKey, { webSearch: true });
   await interaction.editReply(formatAskReply(gameName, question, answer));
+
+  try {
+    var replyMessage = await interaction.fetchReply();
+    var thread = await replyMessage.startThread({ name: buildThreadName(gameName), autoArchiveDuration: 60 });
+    var seeded = deps.appendHistory(deps.historyStore.data, thread.id, { author: 'ユーザー', text: question });
+    seeded = deps.appendHistory(seeded, thread.id, { author: 'Bot', text: answer });
+    deps.historyStore.data = seeded;
+    deps.askThreadIds.add(thread.id);
+  } catch (e) {
+    console.error('スレッド作成に失敗しました: ' + e.message);
+  }
 }
 
 module.exports = {
   buildAskPrompt: buildAskPrompt,
   formatAskReply: formatAskReply,
+  buildThreadName: buildThreadName,
   handleAskCommand: handleAskCommand
 };

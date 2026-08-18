@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildAskPrompt, formatAskReply } = require('./ask.js');
+const { buildAskPrompt, formatAskReply, buildThreadName } = require('./ask.js');
 
 test('buildAskPrompt includes the game name and question', () => {
   const prompt = buildAskPrompt('Hollow Knight', 'クリアまで何時間くらい？');
@@ -25,4 +25,15 @@ test('formatAskReply truncates an overly long answer to fit the field limit', ()
 test('formatAskReply falls back to a message when answer is empty', () => {
   const reply = formatAskReply('Game', 'Q', '');
   assert.match(reply.embeds[0].fields[1].value, /うまく回答を生成できなかった/);
+});
+
+test('buildThreadName appends the suffix to the game name', () => {
+  assert.equal(buildThreadName('Hollow Knight'), 'Hollow Knight について');
+});
+
+test('buildThreadName truncates long game names to fit the 100-char thread name limit', () => {
+  const longName = 'あ'.repeat(150);
+  const name = buildThreadName(longName);
+  assert.ok(name.length <= 100);
+  assert.match(name, /について$/);
 });

@@ -39,7 +39,7 @@ async function fetchChatReply(prompt, apiKey, options) {
   return text.trim();
 }
 
-async function handleChatMessage(message, historyStore, apiKey) {
+async function handleChatMessage(message, historyStore, apiKey, options) {
   var channelId = message.channelId;
   var beforeHistory = (historyStore.data[channelId] || []);
   var entry = { author: message.author.username, text: message.content };
@@ -47,7 +47,7 @@ async function handleChatMessage(message, historyStore, apiKey) {
 
   var prompt = buildChatPrompt(beforeHistory, message.content);
   try {
-    var reply = await fetchChatReply(prompt, apiKey);
+    var reply = await fetchChatReply(prompt, apiKey, options);
     var replyText = (reply || 'うまく返答を生成できなかった…').slice(0, 2000);
     await message.reply(replyText);
     historyStore.data = appendHistory(historyStore.data, channelId, { author: 'Bot', text: replyText }, MAX_HISTORY);

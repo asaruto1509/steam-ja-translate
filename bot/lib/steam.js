@@ -11,6 +11,15 @@ async function searchGame(name) {
   return { id: String(it.id), name: it.name };
 }
 
+// オートコンプリート用。先頭一致に限らずAPIが返す候補をそのまま複数件返す。
+async function searchGameChoices(name) {
+  var r = await fetch('https://store.steampowered.com/api/storesearch/?term=' + encodeURIComponent(name) + '&cc=jp&l=japanese');
+  if (!r.ok) return [];
+  var d = await r.json();
+  var items = d.items || [];
+  return items.map(function (it) { return { id: String(it.id), name: it.name }; });
+}
+
 // check-wishlist-prices.jsのfetchPriceは価格のみでdiscount_percent/originalPriceを持たないため、
 // /price・/wishlistコマンド用に割引情報込みで別途取得する専用関数(scripts/*.jsは変更しない方針のため)。
 async function fetchPriceDetail(appid) {
@@ -30,4 +39,4 @@ async function fetchPriceDetail(appid) {
   };
 }
 
-module.exports = { searchGame: searchGame, fetchPriceDetail: fetchPriceDetail };
+module.exports = { searchGame: searchGame, searchGameChoices: searchGameChoices, fetchPriceDetail: fetchPriceDetail };
