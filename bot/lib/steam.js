@@ -107,6 +107,25 @@ async function fetchLatestNews(appid) {
   return { title: it.title, url: it.url, date: it.date, contents: contents };
 }
 
+// /sales・/gacha用。featuredcategoriesのspecials枠(値下げ中タイトル一覧)。
+async function fetchSpecialsPool() {
+  var r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=jp&l=japanese');
+  if (!r.ok) return [];
+  var d = await r.json();
+  var items = (d.specials && d.specials.items) || [];
+  return items
+    .filter(function (it) { return it.type === 0; })
+    .map(function (it) {
+      return {
+        id: String(it.id),
+        name: it.name,
+        finalPrice: Math.floor((it.final_price || 0) / 100),
+        originalPrice: Math.floor((it.original_price || it.final_price || 0) / 100),
+        discountPercent: it.discount_percent || 0
+      };
+    });
+}
+
 function headerImageUrl(appid) {
   return 'https://cdn.akamai.steamstatic.com/steam/apps/' + appid + '/header.jpg';
 }
@@ -124,6 +143,7 @@ module.exports = {
   fetchAchievementStats: fetchAchievementStats,
   fetchGameContext: fetchGameContext,
   fetchLatestNews: fetchLatestNews,
+  fetchSpecialsPool: fetchSpecialsPool,
   headerImageUrl: headerImageUrl,
   storeUrl: storeUrl
 };
