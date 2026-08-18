@@ -82,8 +82,9 @@ client.on(Events.InteractionCreate, function (interaction) {
     review: function () {
       return reviewCommand.handleReviewCommand(interaction, {
         searchGame: steamLib.searchGame,
+        fetchReviewSummary: steamLib.fetchReviewSummary,
         fetchReviews: checkWishlistPrices.fetchReviews,
-        fetchVerdict: checkWishlistPrices.fetchVerdict
+        fetchChatReply: chat.fetchChatReply
       });
     },
     wishlist: function () {

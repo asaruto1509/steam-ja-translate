@@ -47,6 +47,7 @@ async function handleChatMessage(message, historyStore, apiKey, options) {
 
   var prompt = buildChatPrompt(beforeHistory, message.content);
   try {
+    await message.channel.sendTyping().catch(function () {});
     var reply = await fetchChatReply(prompt, apiKey, options);
     var replyText = (reply || 'うまく返答を生成できなかった…').slice(0, 2000);
     await message.channel.send(replyText);

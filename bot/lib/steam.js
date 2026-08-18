@@ -39,4 +39,22 @@ async function fetchPriceDetail(appid) {
   };
 }
 
-module.exports = { searchGame: searchGame, searchGameChoices: searchGameChoices, fetchPriceDetail: fetchPriceDetail };
+// /reviewのポジティブ率表示用。AIの推測ではなくSteamの実レビュー集計をそのまま使う。
+async function fetchReviewSummary(appid) {
+  var r = await fetch('https://store.steampowered.com/appreviews/' + appid + '?json=1&num_per_page=0&purchase_type=all');
+  if (!r.ok) return null;
+  var d = await r.json();
+  var qs = d.query_summary;
+  if (!qs || !qs.total_reviews) return null;
+  return {
+    positivePct: Math.round((qs.total_positive / qs.total_reviews) * 100),
+    totalReviews: qs.total_reviews
+  };
+}
+
+module.exports = {
+  searchGame: searchGame,
+  searchGameChoices: searchGameChoices,
+  fetchPriceDetail: fetchPriceDetail,
+  fetchReviewSummary: fetchReviewSummary
+};
