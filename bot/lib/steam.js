@@ -30,6 +30,9 @@ async function fetchPriceDetail(appid) {
   if (!info) return null;
   var po = info.price_overview;
   if (!po) return { id: String(appid), name: info.name, finalPrice: 0, originalPrice: 0, discountPercent: 0 };
+  // 一部タイトルはcc=jp指定でも円建て価格が無くドル等のまま返ってくることがあるため、
+  // 通貨がJPYでなければ「価格取得不可」として扱う(誤った円換算表示を避ける)。
+  if (po.currency !== 'JPY') return null;
   return {
     id: String(appid),
     name: info.name,
@@ -114,7 +117,7 @@ async function fetchSpecialsPool() {
   var d = await r.json();
   var items = (d.specials && d.specials.items) || [];
   return items
-    .filter(function (it) { return it.type === 0; })
+    .filter(function (it) { return it.type === 0 && it.currency === 'JPY'; })
     .map(function (it) {
       return {
         id: String(it.id),
@@ -152,12 +155,15 @@ async function fetchRareAchievements(appid, count) {
 
 // おすすめ系プールにDLCが紛れる問題の対策。featuredcategoriesの数値typeだけでは
 // DLCと本編を区別できないため、appdetailsの文字列type("game"/"dlc"等)で最終確認する。
+// ついでに価格が円建てで取得できるかも確認し、ドル建てのまま円表示される誤表示も防ぐ。
 async function isRealGame(appid) {
-  var r = await fetch('https://store.steampowered.com/api/appdetails?appids=' + appid + '&filters=basic&cc=jp&l=japanese');
+  var r = await fetch('https://store.steampowered.com/api/appdetails?appids=' + appid + '&filters=basic,price_overview&cc=jp&l=japanese');
   if (!r.ok) return false;
   var d = await r.json();
   var info = d && d[appid] && d[appid].data;
-  return !!info && info.type === 'game';
+  if (!info || info.type !== 'game') return false;
+  if (info.price_overview && info.price_overview.currency !== 'JPY') return false;
+  return true;
 }
 
 function headerImageUrl(appid) {
