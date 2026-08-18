@@ -1,4 +1,5 @@
 'use strict';
+var steamLib = require('../lib/steam.js');
 
 function formatPriceReply(gameName, detail) {
   if (!detail) {
@@ -12,8 +13,9 @@ function formatPriceReply(gameName, detail) {
   return {
     embeds: [{
       title: detail.name,
-      url: 'https://store.steampowered.com/app/' + detail.id + '/',
+      url: steamLib.storeUrl(detail.id),
       color: 0x66c0f4,
+      image: { url: steamLib.headerImageUrl(detail.id) },
       fields: [{ name: '価格', value: priceLine, inline: true }]
     }]
   };

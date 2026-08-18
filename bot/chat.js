@@ -46,8 +46,12 @@ async function handleChatMessage(message, historyStore, apiKey, options) {
   historyStore.data = appendHistory(historyStore.data, channelId, entry, MAX_HISTORY);
 
   var prompt = buildChatPrompt(beforeHistory, message.content);
+  // sendTypingは約10秒で自動的に切れるため、応答が届くまで打ち直し続ける。
+  message.channel.sendTyping().catch(function () {});
+  var typingInterval = setInterval(function () {
+    message.channel.sendTyping().catch(function () {});
+  }, 8000);
   try {
-    await message.channel.sendTyping().catch(function () {});
     var reply = await fetchChatReply(prompt, apiKey, options);
     var replyText = (reply || 'うまく返答を生成できなかった…').slice(0, 2000);
     await message.channel.send(replyText);
@@ -55,6 +59,8 @@ async function handleChatMessage(message, historyStore, apiKey, options) {
   } catch (e) {
     console.error('チャット応答生成に失敗しました: ' + e.message);
     await message.channel.send('うまく返答を生成できなかった…').catch(function () {});
+  } finally {
+    clearInterval(typingInterval);
   }
 }
 

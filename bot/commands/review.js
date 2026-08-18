@@ -1,4 +1,5 @@
 'use strict';
+var steamLib = require('../lib/steam.js');
 
 var VERDICT_EMOJI = { '今すぐ買い': '🔥', '買い': '✅', 'セール待ち': '⏳', '人を選ぶ': '🤔', '見送り': '⛔' };
 
@@ -31,7 +32,7 @@ function starsLine(stars) {
   return '★'.repeat(n) + '☆'.repeat(5 - n);
 }
 
-function formatReviewReply(gameName, analysis, reviewSummary) {
+function formatReviewReply(gameName, analysis, reviewSummary, appid) {
   if (!analysis) {
     return { content: '「' + gameName + '」のレビューが見つからなかった…' };
   }
@@ -56,14 +57,17 @@ function formatReviewReply(gameName, analysis, reviewSummary) {
     fields.push({ name: '💬 ポジティブ率', value: reviewSummary.positivePct + '% (' + reviewSummary.totalReviews.toLocaleString() + '件のレビュー)' });
   }
 
-  return {
-    embeds: [{
-      title: gameName,
-      color: 0x66c0f4,
-      description: description,
-      fields: fields
-    }]
+  var embed = {
+    title: gameName,
+    color: 0x66c0f4,
+    description: description,
+    fields: fields
   };
+  if (appid) {
+    embed.url = steamLib.storeUrl(appid);
+    embed.image = { url: steamLib.headerImageUrl(appid) };
+  }
+  return { embeds: [embed] };
 }
 
 async function handleReviewCommand(interaction, deps) {
@@ -84,7 +88,7 @@ async function handleReviewCommand(interaction, deps) {
       }
     }
   }
-  await interaction.editReply(formatReviewReply(found ? found.name : gameName, analysis, reviewSummary));
+  await interaction.editReply(formatReviewReply(found ? found.name : gameName, analysis, reviewSummary, found ? found.id : null));
 }
 
 module.exports = {

@@ -103,6 +103,7 @@ client.on(Events.InteractionCreate, function (interaction) {
     ask: function () {
       return askCommand.handleAskCommand(interaction, {
         fetchChatReply: chat.fetchChatReply,
+        searchGame: steamLib.searchGame,
         apiKey: apiKey,
         appendHistory: chat.appendHistory,
         historyStore: historyStore,

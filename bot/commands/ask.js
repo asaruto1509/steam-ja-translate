@@ -1,4 +1,5 @@
 'use strict';
+var steamLib = require('../lib/steam.js');
 
 function buildAskPrompt(gameName, question) {
   return 'あなたはSteamゲームに詳しいアシスタントです。'
@@ -7,18 +8,21 @@ function buildAskPrompt(gameName, question) {
     + '質問: ' + question;
 }
 
-function formatAskReply(gameName, question, answer) {
+function formatAskReply(gameName, question, answer, appid) {
   var answerText = (answer || 'うまく回答を生成できなかった…').slice(0, 1024);
-  return {
-    embeds: [{
-      title: gameName + ' について',
-      color: 0x66c0f4,
-      fields: [
-        { name: '質問', value: question.slice(0, 1024) },
-        { name: '回答', value: answerText }
-      ]
-    }]
+  var embed = {
+    title: gameName + ' について',
+    color: 0x66c0f4,
+    fields: [
+      { name: '質問', value: question.slice(0, 1024) },
+      { name: '回答', value: answerText }
+    ]
   };
+  if (appid) {
+    embed.url = steamLib.storeUrl(appid);
+    embed.image = { url: steamLib.headerImageUrl(appid) };
+  }
+  return { embeds: [embed] };
 }
 
 function buildThreadName(gameName) {
@@ -27,12 +31,14 @@ function buildThreadName(gameName) {
 }
 
 async function handleAskCommand(interaction, deps) {
-  var gameName = interaction.options.getString('game');
+  var rawGameName = interaction.options.getString('game');
   var question = interaction.options.getString('question');
   await interaction.deferReply();
+  var found = await deps.searchGame(rawGameName);
+  var gameName = found ? found.name : rawGameName;
   var prompt = buildAskPrompt(gameName, question);
   var answer = await deps.fetchChatReply(prompt, deps.apiKey, { webSearch: true });
-  await interaction.editReply(formatAskReply(gameName, question, answer));
+  await interaction.editReply(formatAskReply(gameName, question, answer, found ? found.id : null));
 
   try {
     var replyMessage = await interaction.fetchReply();

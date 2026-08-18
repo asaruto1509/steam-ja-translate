@@ -27,6 +27,18 @@ test('formatAskReply falls back to a message when answer is empty', () => {
   assert.match(reply.embeds[0].fields[1].value, /うまく回答を生成できなかった/);
 });
 
+test('formatAskReply includes the Steam header image and store link when an appid is given', () => {
+  const reply = formatAskReply('Game', 'Q', 'A', '1');
+  assert.equal(reply.embeds[0].image.url, 'https://cdn.akamai.steamstatic.com/steam/apps/1/header.jpg');
+  assert.equal(reply.embeds[0].url, 'https://store.steampowered.com/app/1/');
+});
+
+test('formatAskReply omits image and link when no appid is given', () => {
+  const reply = formatAskReply('Game', 'Q', 'A', null);
+  assert.equal(reply.embeds[0].image, undefined);
+  assert.equal(reply.embeds[0].url, undefined);
+});
+
 test('buildThreadName appends the suffix to the game name', () => {
   assert.equal(buildThreadName('Hollow Knight'), 'Hollow Knight について');
 });

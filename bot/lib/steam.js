@@ -52,9 +52,19 @@ async function fetchReviewSummary(appid) {
   };
 }
 
+function headerImageUrl(appid) {
+  return 'https://cdn.akamai.steamstatic.com/steam/apps/' + appid + '/header.jpg';
+}
+
+function storeUrl(appid) {
+  return 'https://store.steampowered.com/app/' + appid + '/';
+}
+
 module.exports = {
   searchGame: searchGame,
   searchGameChoices: searchGameChoices,
   fetchPriceDetail: fetchPriceDetail,
-  fetchReviewSummary: fetchReviewSummary
+  fetchReviewSummary: fetchReviewSummary,
+  headerImageUrl: headerImageUrl,
+  storeUrl: storeUrl
 };

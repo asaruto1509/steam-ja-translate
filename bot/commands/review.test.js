@@ -3,6 +3,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { buildAnalysisPrompt, parseAnalysis, formatReviewReply } = require('./review.js');
 
+test('formatReviewReply includes the Steam header image and store link when an appid is given', () => {
+  const analysis = { verdict: '買い', reason: null, categories: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [] };
+  const reply = formatReviewReply('Some Game', analysis, null, '1');
+  assert.equal(reply.embeds[0].image.url, 'https://cdn.akamai.steamstatic.com/steam/apps/1/header.jpg');
+  assert.equal(reply.embeds[0].url, 'https://store.steampowered.com/app/1/');
+});
+
 test('buildAnalysisPrompt includes the game name and review text', () => {
   const prompt = buildAnalysisPrompt('Hollow Knight', ['最高のメトロイドヴァニア']);
   assert.match(prompt, /Hollow Knight/);
