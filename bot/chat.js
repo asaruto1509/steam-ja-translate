@@ -49,11 +49,11 @@ async function handleChatMessage(message, historyStore, apiKey, options) {
   try {
     var reply = await fetchChatReply(prompt, apiKey, options);
     var replyText = (reply || 'うまく返答を生成できなかった…').slice(0, 2000);
-    await message.reply(replyText);
+    await message.channel.send(replyText);
     historyStore.data = appendHistory(historyStore.data, channelId, { author: 'Bot', text: replyText }, MAX_HISTORY);
   } catch (e) {
     console.error('チャット応答生成に失敗しました: ' + e.message);
-    await message.reply('うまく返答を生成できなかった…').catch(function () {});
+    await message.channel.send('うまく返答を生成できなかった…').catch(function () {});
   }
 }
 
