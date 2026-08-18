@@ -18,14 +18,14 @@ function buildChatPrompt(historyEntries, newMessage) {
   lines.push('ユーザー: ' + newMessage);
   return 'あなたはSteamゲーム好きが集まるDiscordサーバーの雑談Botです。'
     + '気さくにタメ口寄りの日本語で、2〜3文程度の短さで返信してください。'
-    + '会話の中で他のSteamゲームのタイトルに言及するときは、必ず「ゲーム名」のように鉤括弧で囲んでください。\n\n'
+    + '会話の中で他のSteamゲームのタイトルに言及するときは、必ず『ゲーム名』のように括弧で囲んでください。\n\n'
     + '会話:\n' + lines.join('\n') + '\nBot:';
 }
 
 function extractGameMentions(text, maxCount) {
   maxCount = maxCount || 5;
   var seen = [];
-  var re = /「([^」]+)」/g;
+  var re = /[「『]([^」』]+)[」』]/g;
   var match;
   while ((match = re.exec(text || '')) !== null && seen.length < maxCount) {
     if (seen.indexOf(match[1]) === -1) seen.push(match[1]);

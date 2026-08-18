@@ -42,6 +42,11 @@ test('extractGameMentions pulls unique bracketed titles from text', () => {
   assert.deepEqual(mentions, ['Hollow Knight', 'Celeste']);
 });
 
+test('extractGameMentions also matches 『』作品名括弧(AIがこちらを使うことがある)', () => {
+  const mentions = extractGameMentions('『Fallout 3』や『Metro Redux』が似た雰囲気です。');
+  assert.deepEqual(mentions, ['Fallout 3', 'Metro Redux']);
+});
+
 test('extractGameMentions returns an empty array when there are no brackets', () => {
   assert.deepEqual(extractGameMentions('普通の返答だよ'), []);
 });
