@@ -10,6 +10,7 @@ var reviewCommand = require('./commands/review.js');
 var wishlistCommand = require('./commands/wishlist.js');
 var recommendCommand = require('./commands/recommend.js');
 var askCommand = require('./commands/ask.js');
+var statsCommand = require('./commands/stats.js');
 var autocomplete = require('./lib/autocomplete.js');
 
 var token = process.env.DISCORD_BOT_TOKEN;
@@ -32,7 +33,9 @@ var commands = [
   new SlashCommandBuilder().setName('recommend').setDescription('その場でAIおすすめゲームを紹介'),
   new SlashCommandBuilder().setName('ask').setDescription('ゲームについてAIに質問する(Web検索あり)')
     .addStringOption(function (opt) { return opt.setName('game').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
-    .addStringOption(function (opt) { return opt.setName('question').setDescription('質問内容').setRequired(true); })
+    .addStringOption(function (opt) { return opt.setName('question').setDescription('質問内容').setRequired(true); }),
+  new SlashCommandBuilder().setName('stats').setDescription('現在の同時接続数と実績統計を調べる')
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
@@ -83,6 +86,7 @@ client.on(Events.InteractionCreate, function (interaction) {
       return reviewCommand.handleReviewCommand(interaction, {
         searchGame: steamLib.searchGame,
         fetchReviewSummary: steamLib.fetchReviewSummary,
+        fetchGameContext: steamLib.fetchGameContext,
         fetchReviews: checkWishlistPrices.fetchReviews,
         fetchChatReply: chat.fetchChatReply
       });
@@ -108,6 +112,13 @@ client.on(Events.InteractionCreate, function (interaction) {
         appendHistory: chat.appendHistory,
         historyStore: historyStore,
         askThreadIds: askThreadIds
+      });
+    },
+    stats: function () {
+      return statsCommand.handleStatsCommand(interaction, {
+        searchGame: steamLib.searchGame,
+        fetchPlayerCount: steamLib.fetchPlayerCount,
+        fetchAchievementStats: steamLib.fetchAchievementStats
       });
     }
   };

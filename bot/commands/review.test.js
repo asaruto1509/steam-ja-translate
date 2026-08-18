@@ -5,15 +5,29 @@ const { buildAnalysisPrompt, parseAnalysis, formatReviewReply } = require('./rev
 
 test('formatReviewReply includes the Steam header image and store link when an appid is given', () => {
   const analysis = { verdict: '買い', reason: null, categories: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [] };
-  const reply = formatReviewReply('Some Game', analysis, null, '1');
+  const reply = formatReviewReply('Some Game', analysis, null, '1', null);
   assert.equal(reply.embeds[0].image.url, 'https://cdn.akamai.steamstatic.com/steam/apps/1/header.jpg');
   assert.equal(reply.embeds[0].url, 'https://store.steampowered.com/app/1/');
+});
+
+test('formatReviewReply shows a genre/category tag field when game context is given', () => {
+  const analysis = { verdict: '買い', reason: null, categories: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [] };
+  const reply = formatReviewReply('Some Game', analysis, null, '1', { genres: ['アクション', 'RPG'], categories: ['シングルプレイヤー'] });
+  const tagField = reply.embeds[0].fields.find(f => f.name.includes('ジャンル'));
+  assert.match(tagField.value, /アクション/);
+  assert.match(tagField.value, /シングルプレイヤー/);
 });
 
 test('buildAnalysisPrompt includes the game name and review text', () => {
   const prompt = buildAnalysisPrompt('Hollow Knight', ['最高のメトロイドヴァニア']);
   assert.match(prompt, /Hollow Knight/);
   assert.match(prompt, /最高のメトロイドヴァニア/);
+});
+
+test('buildAnalysisPrompt includes genre/category context when given', () => {
+  const prompt = buildAnalysisPrompt('Hollow Knight', ['レビュー'], { genres: ['アクション'], categories: ['シングルプレイヤー'] });
+  assert.match(prompt, /アクション/);
+  assert.match(prompt, /シングルプレイヤー/);
 });
 
 test('parseAnalysis extracts a JSON object from the AI response', () => {
