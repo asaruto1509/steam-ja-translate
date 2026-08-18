@@ -126,6 +126,17 @@ async function fetchSpecialsPool() {
     });
 }
 
+// /upcoming用。featuredcategoriesのcoming_soon枠。
+async function fetchUpcomingPool() {
+  var r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=jp&l=japanese');
+  if (!r.ok) return [];
+  var d = await r.json();
+  var items = (d.coming_soon && d.coming_soon.items) || [];
+  return items
+    .filter(function (it) { return it.type === 0; })
+    .map(function (it) { return { id: String(it.id), name: it.name }; });
+}
+
 function headerImageUrl(appid) {
   return 'https://cdn.akamai.steamstatic.com/steam/apps/' + appid + '/header.jpg';
 }
@@ -144,6 +155,7 @@ module.exports = {
   fetchGameContext: fetchGameContext,
   fetchLatestNews: fetchLatestNews,
   fetchSpecialsPool: fetchSpecialsPool,
+  fetchUpcomingPool: fetchUpcomingPool,
   headerImageUrl: headerImageUrl,
   storeUrl: storeUrl
 };

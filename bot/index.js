@@ -15,6 +15,9 @@ var newsCommand = require('./commands/news.js');
 var compareCommand = require('./commands/compare.js');
 var salesCommand = require('./commands/sales.js');
 var gachaCommand = require('./commands/gacha.js');
+var upcomingCommand = require('./commands/upcoming.js');
+var quizCommand = require('./commands/quiz.js');
+var moodCommand = require('./commands/mood.js');
 var autocomplete = require('./lib/autocomplete.js');
 
 var token = process.env.DISCORD_BOT_TOKEN;
@@ -46,7 +49,11 @@ var commands = [
     .addStringOption(function (opt) { return opt.setName('game_a').setDescription('ゲーム名A').setRequired(true).setAutocomplete(true); })
     .addStringOption(function (opt) { return opt.setName('game_b').setDescription('ゲーム名B').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('sales').setDescription('今週のセールおすすめをAIが厳選'),
-  new SlashCommandBuilder().setName('gacha').setDescription('格安タイトルをランダムに1本ガチャ')
+  new SlashCommandBuilder().setName('gacha').setDescription('格安タイトルをランダムに1本ガチャ'),
+  new SlashCommandBuilder().setName('upcoming').setDescription('近日リリース予定のタイトルを紹介'),
+  new SlashCommandBuilder().setName('quiz').setDescription('ヒントからゲームを当てるクイズを出題'),
+  new SlashCommandBuilder().setName('mood').setDescription('今の気分に合うゲームをAIが探す')
+    .addStringOption(function (opt) { return opt.setName('query').setDescription('気分・要望(例: まったり農業したい)').setRequired(true); })
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
@@ -158,6 +165,27 @@ client.on(Events.InteractionCreate, function (interaction) {
         fetchSpecialsPool: steamLib.fetchSpecialsPool,
         pickRandomGames: recommendGames.pickRandomGames,
         fetchReviewSummary: steamLib.fetchReviewSummary,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    upcoming: function () {
+      return upcomingCommand.handleUpcomingCommand(interaction, {
+        fetchUpcomingPool: steamLib.fetchUpcomingPool,
+        pickRandomGames: recommendGames.pickRandomGames,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    quiz: function () {
+      return quizCommand.handleQuizCommand(interaction, {
+        fetchFeaturedPool: recommendGames.fetchFeaturedPool,
+        pickRandomGames: recommendGames.pickRandomGames,
+        fetchReviews: checkWishlistPrices.fetchReviews,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    mood: function () {
+      return moodCommand.handleMoodCommand(interaction, {
+        searchGame: steamLib.searchGame,
         fetchChatReply: chat.fetchChatReply
       });
     }
