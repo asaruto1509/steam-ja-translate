@@ -1,8 +1,9 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var promptContext = require('../lib/promptContext.js');
 
-function buildMashupPrompt(genreA, genreB, gameName) {
-  return '「' + genreA + '」と「' + genreB + '」を掛け合わせたようなSteamゲームを探していたら「' + gameName + '」が見つかりました。\n'
+function buildMashupPrompt(genreA, genreB, gameName, gameContext) {
+  return '「' + genreA + '」と「' + genreB + '」を掛け合わせたようなSteamゲームを探していたら「' + gameName + '」' + promptContext.buildContextLine(gameContext) + 'が見つかりました。\n'
     + 'このゲームが両方の要素をどう融合しているか、気さくなタメ口寄りの日本語で1〜2文で紹介してください。前置きは不要です。';
 }
 
@@ -30,7 +31,8 @@ async function handleMashupCommand(interaction, deps) {
   var found = await deps.searchGame(genreA + ' ' + genreB);
   var blurb = null;
   if (found && apiKey) {
-    blurb = await deps.fetchChatReply(buildMashupPrompt(genreA, genreB, found.name), apiKey, { webSearch: false });
+    var gameContext = await deps.fetchGameContext(found.id);
+    blurb = await deps.fetchChatReply(buildMashupPrompt(genreA, genreB, found.name, gameContext), apiKey, { webSearch: false });
   }
   await interaction.editReply(formatMashupReply(genreA, genreB, found, blurb));
 }

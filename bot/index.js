@@ -22,6 +22,7 @@ var hiddenGemCommand = require('./commands/hiddengem.js');
 var challengeCommand = require('./commands/challenge.js');
 var mashupCommand = require('./commands/mashup.js');
 var autocomplete = require('./lib/autocomplete.js');
+var gamePool = require('./lib/gamePool.js');
 
 var token = process.env.DISCORD_BOT_TOKEN;
 var clientId = process.env.DISCORD_CLIENT_ID;
@@ -125,6 +126,8 @@ client.on(Events.InteractionCreate, function (interaction) {
       return recommendCommand.handleRecommendCommand(interaction, {
         fetchFeaturedPool: recommendGames.fetchFeaturedPool,
         pickRandomGames: recommendGames.pickRandomGames,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
         fetchReviews: checkWishlistPrices.fetchReviews,
         fetchGameAnalysis: recommendGames.fetchGameAnalysis,
         buildHeaderEmbed: recommendGames.buildHeaderEmbed,
@@ -166,6 +169,8 @@ client.on(Events.InteractionCreate, function (interaction) {
     sales: function () {
       return salesCommand.handleSalesCommand(interaction, {
         fetchSpecialsPool: steamLib.fetchSpecialsPool,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
         fetchChatReply: chat.fetchChatReply
       });
     },
@@ -173,7 +178,10 @@ client.on(Events.InteractionCreate, function (interaction) {
       return gachaCommand.handleGachaCommand(interaction, {
         fetchSpecialsPool: steamLib.fetchSpecialsPool,
         pickRandomGames: recommendGames.pickRandomGames,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
         fetchReviewSummary: steamLib.fetchReviewSummary,
+        fetchGameContext: steamLib.fetchGameContext,
         fetchChatReply: chat.fetchChatReply
       });
     },
@@ -181,6 +189,9 @@ client.on(Events.InteractionCreate, function (interaction) {
       return upcomingCommand.handleUpcomingCommand(interaction, {
         fetchUpcomingPool: steamLib.fetchUpcomingPool,
         pickRandomGames: recommendGames.pickRandomGames,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
+        fetchGameContext: steamLib.fetchGameContext,
         fetchChatReply: chat.fetchChatReply
       });
     },
@@ -188,6 +199,8 @@ client.on(Events.InteractionCreate, function (interaction) {
       return quizCommand.handleQuizCommand(interaction, {
         fetchFeaturedPool: recommendGames.fetchFeaturedPool,
         pickRandomGames: recommendGames.pickRandomGames,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
         fetchReviews: checkWishlistPrices.fetchReviews,
         fetchChatReply: chat.fetchChatReply
       });
@@ -195,14 +208,19 @@ client.on(Events.InteractionCreate, function (interaction) {
     mood: function () {
       return moodCommand.handleMoodCommand(interaction, {
         searchGame: steamLib.searchGame,
+        fetchGameContext: steamLib.fetchGameContext,
         fetchChatReply: chat.fetchChatReply
       });
     },
     hiddengem: function () {
       return hiddenGemCommand.handleHiddenGemCommand(interaction, {
         fetchFeaturedPool: recommendGames.fetchFeaturedPool,
+        pickRandomGames: recommendGames.pickRandomGames,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
         fetchReviewSummary: steamLib.fetchReviewSummary,
         fetchPlayerCount: steamLib.fetchPlayerCount,
+        fetchGameContext: steamLib.fetchGameContext,
         fetchChatReply: chat.fetchChatReply
       });
     },
@@ -210,12 +228,14 @@ client.on(Events.InteractionCreate, function (interaction) {
       return challengeCommand.handleChallengeCommand(interaction, {
         searchGame: steamLib.searchGame,
         fetchRareAchievements: steamLib.fetchRareAchievements,
+        fetchGameContext: steamLib.fetchGameContext,
         fetchChatReply: chat.fetchChatReply
       });
     },
     mashup: function () {
       return mashupCommand.handleMashupCommand(interaction, {
         searchGame: steamLib.searchGame,
+        fetchGameContext: steamLib.fetchGameContext,
         fetchChatReply: chat.fetchChatReply
       });
     }

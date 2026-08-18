@@ -14,6 +14,11 @@ test('buildMoodReasonPrompt includes the query and matched game name', () => {
   assert.match(prompt, /Stardew Valley/);
 });
 
+test('buildMoodReasonPrompt includes real game context when given', () => {
+  const prompt = buildMoodReasonPrompt('まったり農業したい', 'Stardew Valley', { genres: ['シミュレーション'], categories: [] });
+  assert.match(prompt, /シミュレーション/);
+});
+
 test('formatMoodReply shows the matched game with the AI reasoning', () => {
   const reply = formatMoodReply('まったり農業したい', { id: '1', name: 'Stardew Valley' }, 'のんびり農業と町づくりが楽しめる名作。');
   assert.equal(reply.embeds[0].title, 'Stardew Valley');

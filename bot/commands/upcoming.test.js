@@ -9,6 +9,11 @@ test('buildUpcomingPrompt lists each game name', () => {
   assert.match(prompt, /TFC2/);
 });
 
+test('buildUpcomingPrompt includes per-game context when given', () => {
+  const prompt = buildUpcomingPrompt([{ name: 'Wordforge', context: { genres: ['パズル'], categories: [] } }]);
+  assert.match(prompt, /パズル/);
+});
+
 test('formatUpcomingReply lists each game as a linked field with the AI blurb', () => {
   const games = [{ id: '1', name: 'Wordforge' }, { id: '2', name: 'TFC2' }];
   const reply = formatUpcomingReply(games, '来週は文字パズルと歴史サバイバルが熱い！');

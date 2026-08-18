@@ -1,5 +1,6 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var promptContext = require('../lib/promptContext.js');
 
 function pickHiddenGem(candidates, minPositivePct, maxPlayerCount) {
   var eligible = candidates.filter(function (g) {
@@ -10,8 +11,8 @@ function pickHiddenGem(candidates, minPositivePct, maxPlayerCount) {
   return eligible.sort(function (a, b) { return b.positivePct - a.positivePct; })[0];
 }
 
-function buildHiddenGemPrompt(gameName) {
-  return 'あなたはSteamの隠れた名作発掘AIです。「' + gameName + '」は高評価なのにプレイヤーが少ない知る人ぞ知る作品です。'
+function buildHiddenGemPrompt(gameName, gameContext) {
+  return 'あなたはSteamの隠れた名作発掘AIです。「' + gameName + '」' + promptContext.buildContextLine(gameContext) + 'は高評価なのにプレイヤーが少ない知る人ぞ知る作品です。'
     + 'なぜ埋もれているのに面白いのか、気さくなタメ口寄りの日本語で1〜2文で紹介してください。前置きは不要です。';
 }
 
@@ -35,7 +36,8 @@ async function handleHiddenGemCommand(interaction, deps) {
   var apiKey = process.env.ONEMIN_API_KEY;
   await interaction.deferReply();
   var pool = await deps.fetchFeaturedPool();
-  var sample = pool.slice(0, 15);
+  var shuffled = deps.pickRandomGames(pool, pool.length);
+  var sample = await deps.pickRealGames(shuffled, 15, deps.isRealGame, 25);
   var candidates = await Promise.all(sample.map(async function (g) {
     var summary = await deps.fetchReviewSummary(g.id);
     var playerCount = await deps.fetchPlayerCount(g.id);
@@ -44,7 +46,8 @@ async function handleHiddenGemCommand(interaction, deps) {
   var gem = pickHiddenGem(candidates, 85, 300);
   var blurb = null;
   if (gem && apiKey) {
-    blurb = await deps.fetchChatReply(buildHiddenGemPrompt(gem.name), apiKey, { webSearch: false });
+    var gameContext = await deps.fetchGameContext(gem.id);
+    blurb = await deps.fetchChatReply(buildHiddenGemPrompt(gem.name, gameContext), apiKey, { webSearch: false });
   }
   await interaction.editReply(formatHiddenGemReply(gem, blurb));
 }

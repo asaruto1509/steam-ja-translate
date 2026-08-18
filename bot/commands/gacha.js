@@ -1,5 +1,6 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var promptContext = require('../lib/promptContext.js');
 
 function filterCheapPool(pool, maxPrice) {
   return pool.filter(function (g) { return g.finalPrice <= maxPrice; });
@@ -12,8 +13,8 @@ function rarityForPositivePct(pct) {
   return { grade: 'N', emoji: '▪' };
 }
 
-function buildGachaFlavorPrompt(gameName) {
-  return 'あなたはゲーム紹介AIです。「' + gameName + '」というSteamゲームについて、'
+function buildGachaFlavorPrompt(gameName, gameContext) {
+  return 'あなたはゲーム紹介AIです。「' + gameName + '」' + promptContext.buildContextLine(gameContext) + 'というSteamゲームについて、'
     + 'ユーモラスかつ気さくなタメ口寄りの日本語で、1〜2文の面白い紹介文を作ってください。前置きは不要です。';
 }
 
@@ -44,14 +45,16 @@ async function handleGachaCommand(interaction, deps) {
   await interaction.deferReply();
   var pool = await deps.fetchSpecialsPool();
   var cheap = filterCheapPool(pool, 1000);
-  var picked = deps.pickRandomGames(cheap, 1)[0] || null;
+  var shuffled = deps.pickRandomGames(cheap, cheap.length);
+  var picked = (await deps.pickRealGames(shuffled, 1, deps.isRealGame, 15))[0] || null;
   var positivePct = null;
   var flavorText = null;
   if (picked) {
     var summary = await deps.fetchReviewSummary(picked.id);
     positivePct = summary ? summary.positivePct : null;
     if (apiKey) {
-      flavorText = await deps.fetchChatReply(buildGachaFlavorPrompt(picked.name), apiKey, { webSearch: false });
+      var gameContext = await deps.fetchGameContext(picked.id);
+      flavorText = await deps.fetchChatReply(buildGachaFlavorPrompt(picked.name, gameContext), apiKey, { webSearch: false });
     }
   }
   await interaction.editReply(formatGachaReply(picked, positivePct, flavorText));

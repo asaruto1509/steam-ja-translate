@@ -23,6 +23,11 @@ test('buildHiddenGemPrompt includes the game name', () => {
   assert.match(prompt, /Quiet Gem/);
 });
 
+test('buildHiddenGemPrompt includes real game context when given', () => {
+  const prompt = buildHiddenGemPrompt('Quiet Gem', { genres: ['パズル'], categories: [] });
+  assert.match(prompt, /パズル/);
+});
+
 test('formatHiddenGemReply shows the game with its stats and AI blurb', () => {
   const game = { id: '2', name: 'Quiet Gem', positivePct: 92, playerCount: 80 };
   const reply = formatHiddenGemReply(game, '知る人ぞ知る名作。');

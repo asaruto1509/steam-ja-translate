@@ -23,11 +23,27 @@ function buildAnalysisPrompt(gameName, reviewTexts, gameContext) {
     + 'レビュー:\n' + joined;
 }
 
+function extractJsonBlock(text) {
+  var start = text.indexOf('{');
+  if (start === -1) return null;
+  var depth = 0;
+  for (var i = start; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
 function parseAnalysis(text) {
-  var match = (text || '').match(/\{[\s\S]*\}/);
-  if (!match) return null;
+  // qwen3系の<think>推論ブロックに例示JSONが混じっていると誤抽出するため、先に除去する。
+  var cleaned = (text || '').replace(/<think>[\s\S]*?<\/think>/gi, '');
+  var block = extractJsonBlock(cleaned);
+  if (!block) return null;
   try {
-    return JSON.parse(match[0]);
+    return JSON.parse(block);
   } catch (e) {
     return null;
   }
@@ -38,9 +54,15 @@ function starsLine(stars) {
   return '★'.repeat(n) + '☆'.repeat(5 - n);
 }
 
-function formatReviewReply(gameName, analysis, reviewSummary, appid, gameContext) {
+var FAILURE_MESSAGES = {
+  not_found: 'が見つからなかった…',
+  no_reviews: 'はレビューがまだ無いみたい…',
+  parse_failed: 'のAI分析にちょっと失敗した…もう一度試してみて'
+};
+
+function formatReviewReply(gameName, analysis, reviewSummary, appid, gameContext, failureReason) {
   if (!analysis) {
-    return { content: '「' + gameName + '」のレビューが見つからなかった…' };
+    return { content: '「' + gameName + '」' + (FAILURE_MESSAGES[failureReason] || FAILURE_MESSAGES.not_found) };
   }
   var emoji = VERDICT_EMOJI[analysis.verdict] || '▪';
   var description = emoji + ' **' + (analysis.verdict || '判定不明') + '**'
@@ -91,19 +113,23 @@ async function handleReviewCommand(interaction, deps) {
   var analysis = null;
   var reviewSummary = null;
   var gameContext = null;
+  var failureReason = 'not_found';
   if (found) {
+    failureReason = 'no_reviews';
     reviewSummary = await deps.fetchReviewSummary(found.id);
     gameContext = await deps.fetchGameContext(found.id);
     if (apiKey) {
       var reviews = await deps.fetchReviews(found.id, 15);
       if (reviews.length) {
+        failureReason = 'parse_failed';
         var prompt = buildAnalysisPrompt(found.name, reviews, gameContext);
         var raw = await deps.fetchChatReply(prompt, apiKey, { webSearch: false });
         analysis = parseAnalysis(raw);
+        if (!analysis) console.error('/review AI応答のパースに失敗しました。生テキスト: ' + String(raw).slice(0, 500));
       }
     }
   }
-  await interaction.editReply(formatReviewReply(found ? found.name : gameName, analysis, reviewSummary, found ? found.id : null, gameContext));
+  await interaction.editReply(formatReviewReply(found ? found.name : gameName, analysis, reviewSummary, found ? found.id : null, gameContext, failureReason));
 }
 
 module.exports = {

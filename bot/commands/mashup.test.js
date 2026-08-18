@@ -10,6 +10,11 @@ test('buildMashupPrompt includes both genres and the matched game name', () => {
   assert.match(prompt, /Inscryption/);
 });
 
+test('buildMashupPrompt includes real game context when given', () => {
+  const prompt = buildMashupPrompt('ホラー', 'パズル', 'Inscryption', { genres: ['カードゲーム'], categories: [] });
+  assert.match(prompt, /カードゲーム/);
+});
+
 test('formatMashupReply shows the matched game with the AI blurb', () => {
   const game = { id: '1', name: 'Inscryption' };
   const reply = formatMashupReply('ホラー', 'パズル', game, 'カードゲームとホラー演出が融合した異色作。');

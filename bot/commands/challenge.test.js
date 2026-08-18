@@ -11,6 +11,12 @@ test('buildChallengePrompt includes the game name and rare achievement names', (
   assert.match(prompt, /GODMASTER/);
 });
 
+test('buildChallengePrompt includes real game context when given', () => {
+  const achievements = [{ name: 'STEEL_SOUL', percent: 0.3 }];
+  const prompt = buildChallengePrompt('Hollow Knight', achievements, { genres: ['メトロイドヴァニア'], categories: [] });
+  assert.match(prompt, /メトロイドヴァニア/);
+});
+
 test('formatChallengeReply lists the rare achievements and the AI challenge text', () => {
   const achievements = [{ name: 'STEEL_SOUL', percent: 0.3 }];
   const reply = formatChallengeReply('Hollow Knight', achievements, 'ダメージを一切受けずにクリアせよ！', '1');

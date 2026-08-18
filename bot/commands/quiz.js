@@ -30,7 +30,8 @@ async function handleQuizCommand(interaction, deps) {
     return;
   }
   var pool = await deps.fetchFeaturedPool();
-  var picked = deps.pickRandomGames(pool, 1)[0] || null;
+  var shuffled = deps.pickRandomGames(pool, pool.length);
+  var picked = (await deps.pickRealGames(shuffled, 1, deps.isRealGame, 15))[0] || null;
   if (!picked) {
     await interaction.editReply({ content: 'クイズを出題できなかった…' });
     return;

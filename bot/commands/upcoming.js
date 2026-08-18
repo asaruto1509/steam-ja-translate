@@ -1,8 +1,9 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var promptContext = require('../lib/promptContext.js');
 
 function buildUpcomingPrompt(games) {
-  var names = games.map(function (g) { return g.name; }).join('、');
+  var names = games.map(function (g) { return g.name + promptContext.buildContextLine(g.context); }).join('、');
   return 'あなたはSteam新作紹介AIです。以下は近日リリース予定のタイトルです。\n' + names + '\n\n'
     + 'この中で気になるものを、気さくなタメ口寄りの日本語で1〜2文の紹介コメントにまとめてください。前置きは不要です。';
 }
@@ -28,9 +29,13 @@ async function handleUpcomingCommand(interaction, deps) {
   var apiKey = process.env.ONEMIN_API_KEY;
   await interaction.deferReply();
   var pool = await deps.fetchUpcomingPool();
-  var games = deps.pickRandomGames(pool, 4);
+  var shuffled = deps.pickRandomGames(pool, pool.length);
+  var games = await deps.pickRealGames(shuffled, 4, deps.isRealGame, 20);
   var blurb = null;
   if (games.length && apiKey) {
+    await Promise.all(games.map(async function (g) {
+      g.context = await deps.fetchGameContext(g.id);
+    }));
     blurb = await deps.fetchChatReply(buildUpcomingPrompt(games), apiKey, { webSearch: false });
   }
   await interaction.editReply(formatUpcomingReply(games, blurb));

@@ -1,5 +1,6 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var promptContext = require('../lib/promptContext.js');
 
 function buildKeywordPrompt(query) {
   return 'あなたはSteamストア検索キーワード生成AIです。次のユーザーの気分・要望に合うゲームを探すための、'
@@ -7,8 +8,8 @@ function buildKeywordPrompt(query) {
     + '気分・要望: ' + query;
 }
 
-function buildMoodReasonPrompt(query, gameName) {
-  return 'ユーザーの気分・要望は「' + query + '」でした。それに対して「' + gameName + '」というSteamゲームが見つかりました。\n'
+function buildMoodReasonPrompt(query, gameName, gameContext) {
+  return 'ユーザーの気分・要望は「' + query + '」でした。それに対して「' + gameName + '」' + promptContext.buildContextLine(gameContext) + 'というSteamゲームが見つかりました。\n'
     + 'このゲームがなぜその気分・要望にマッチするか、気さくなタメ口寄りの日本語で1〜2文で説明してください。前置きは不要です。';
 }
 
@@ -39,7 +40,8 @@ async function handleMoodCommand(interaction, deps) {
   var found = keywords ? await deps.searchGame(keywords.trim()) : null;
   var reason = null;
   if (found) {
-    reason = await deps.fetchChatReply(buildMoodReasonPrompt(query, found.name), apiKey, { webSearch: false });
+    var gameContext = await deps.fetchGameContext(found.id);
+    reason = await deps.fetchChatReply(buildMoodReasonPrompt(query, found.name, gameContext), apiKey, { webSearch: false });
   }
   await interaction.editReply(formatMoodReply(query, found, reason));
 }

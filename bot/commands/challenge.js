@@ -1,9 +1,10 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var promptContext = require('../lib/promptContext.js');
 
-function buildChallengePrompt(gameName, achievements) {
+function buildChallengePrompt(gameName, achievements, gameContext) {
   var names = achievements.map(function (a) { return a.name; }).join('、');
-  return 'あなたはSteamゲームの縛りプレイ企画AIです。「' + gameName + '」には次のレア実績があります: ' + names + '\n\n'
+  return 'あなたはSteamゲームの縛りプレイ企画AIです。「' + gameName + '」' + promptContext.buildContextLine(gameContext) + 'には次のレア実績があります: ' + names + '\n\n'
     + 'これらのレア実績の解除を絡めた、面白い縛りプレイ・チャレンジ企画を1つ、気さくなタメ口寄りの日本語で2〜3文で提案してください。前置きは不要です。';
 }
 
@@ -33,7 +34,8 @@ async function handleChallengeCommand(interaction, deps) {
   var achievements = found ? await deps.fetchRareAchievements(found.id, 3) : [];
   var challengeText = null;
   if (achievements.length && apiKey) {
-    challengeText = await deps.fetchChatReply(buildChallengePrompt(found.name, achievements), apiKey, { webSearch: false });
+    var gameContext = await deps.fetchGameContext(found.id);
+    challengeText = await deps.fetchChatReply(buildChallengePrompt(found.name, achievements, gameContext), apiKey, { webSearch: false });
   }
   await interaction.editReply(formatChallengeReply(found ? found.name : gameName, achievements, challengeText, found ? found.id : null));
 }

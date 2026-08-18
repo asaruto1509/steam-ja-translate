@@ -3,7 +3,8 @@
 async function handleRecommendCommand(interaction, deps) {
   await interaction.deferReply();
   var pool = await deps.fetchFeaturedPool();
-  var picked = deps.pickRandomGames(pool, 3);
+  var shuffled = deps.pickRandomGames(pool, pool.length);
+  var picked = await deps.pickRealGames(shuffled, 3, deps.isRealGame, 20);
   var apiKey = process.env.ONEMIN_API_KEY;
 
   for (var i = 0; i < picked.length; i++) {

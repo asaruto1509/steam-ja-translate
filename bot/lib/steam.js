@@ -150,6 +150,16 @@ async function fetchRareAchievements(appid, count) {
     .slice(0, count);
 }
 
+// おすすめ系プールにDLCが紛れる問題の対策。featuredcategoriesの数値typeだけでは
+// DLCと本編を区別できないため、appdetailsの文字列type("game"/"dlc"等)で最終確認する。
+async function isRealGame(appid) {
+  var r = await fetch('https://store.steampowered.com/api/appdetails?appids=' + appid + '&filters=basic&cc=jp&l=japanese');
+  if (!r.ok) return false;
+  var d = await r.json();
+  var info = d && d[appid] && d[appid].data;
+  return !!info && info.type === 'game';
+}
+
 function headerImageUrl(appid) {
   return 'https://cdn.akamai.steamstatic.com/steam/apps/' + appid + '/header.jpg';
 }
@@ -170,6 +180,7 @@ module.exports = {
   fetchSpecialsPool: fetchSpecialsPool,
   fetchUpcomingPool: fetchUpcomingPool,
   fetchRareAchievements: fetchRareAchievements,
+  isRealGame: isRealGame,
   headerImageUrl: headerImageUrl,
   storeUrl: storeUrl
 };

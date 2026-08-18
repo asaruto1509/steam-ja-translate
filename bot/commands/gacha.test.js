@@ -22,6 +22,11 @@ test('buildGachaFlavorPrompt includes the game name', () => {
   assert.match(prompt, /Weird Indie Game/);
 });
 
+test('buildGachaFlavorPrompt includes genre context when given, to reduce guessing on unfamiliar titles', () => {
+  const prompt = buildGachaFlavorPrompt('Weird Indie Game', { genres: ['シミュレーション'], categories: [] });
+  assert.match(prompt, /シミュレーション/);
+});
+
 test('formatGachaReply shows the rarity badge, price and flavor text', () => {
   const game = { id: '1', name: 'Weird Indie Game', finalPrice: 300, originalPrice: 300, discountPercent: 0 };
   const reply = formatGachaReply(game, 92, 'なぜか妙にクセになる掃除シミュレーター。');

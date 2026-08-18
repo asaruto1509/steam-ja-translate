@@ -36,7 +36,8 @@ async function handleSalesCommand(interaction, deps) {
   var apiKey = process.env.ONEMIN_API_KEY;
   await interaction.deferReply();
   var pool = await deps.fetchSpecialsPool();
-  var games = pickTopSales(pool.filter(function (g) { return g.discountPercent > 0; }), 5);
+  var candidates = pickTopSales(pool.filter(function (g) { return g.discountPercent > 0; }), 15);
+  var games = await deps.pickRealGames(candidates, 5, deps.isRealGame, 15);
   var blurb = null;
   if (games.length && apiKey) {
     blurb = await deps.fetchChatReply(buildSalesPrompt(games), apiKey, { webSearch: false });

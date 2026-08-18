@@ -41,9 +41,33 @@ test('parseAnalysis returns null for unparsable text', () => {
   assert.equal(parseAnalysis('AIが変な文章を返した'), null);
 });
 
-test('formatReviewReply returns a not-found message when analysis is null', () => {
-  const reply = formatReviewReply('Unknown Game', null, null);
+test('parseAnalysis strips <think> blocks before extracting JSON', () => {
+  const text = '<think>例えば{"foo":"bar"}みたいな形式かな</think>{"verdict":"買い","reason":"良い","categories":[],"pros":[],"cons":[],"audienceFor":[],"audienceAgainst":[]}';
+  const analysis = parseAnalysis(text);
+  assert.equal(analysis.verdict, '買い');
+});
+
+test('parseAnalysis extracts only the balanced JSON block, ignoring trailing text', () => {
+  const text = '{"verdict":"買い","reason":"良い","categories":[{"name":"A","stars":3}],"pros":[],"cons":[],"audienceFor":[],"audienceAgainst":[]} 以上です。';
+  const analysis = parseAnalysis(text);
+  assert.equal(analysis.verdict, '買い');
+  assert.equal(analysis.categories[0].stars, 3);
+});
+
+test('formatReviewReply returns a not-found message when the game was not found on Steam', () => {
+  const reply = formatReviewReply('Unknown Game', null, null, null, null, 'not_found');
   assert.match(reply.content, /見つからなかった/);
+});
+
+test('formatReviewReply returns a no-reviews message when the game has no reviews yet', () => {
+  const reply = formatReviewReply('New Game', null, null, null, null, 'no_reviews');
+  assert.match(reply.content, /レビューがまだ/);
+});
+
+test('formatReviewReply returns a distinct message when AI analysis failed to parse', () => {
+  const reply = formatReviewReply('Some Game', null, null, null, null, 'parse_failed');
+  assert.match(reply.content, /もう一度/);
+  assert.doesNotMatch(reply.content, /見つからなかった/);
 });
 
 test('formatReviewReply shows verdict, categories, pros, cons and audience fields', () => {
