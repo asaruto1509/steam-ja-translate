@@ -28,3 +28,15 @@ test('formatPriceReply returns a not-found message when detail is null', () => {
   const reply = formatPriceReply('Unknown Game', null);
   assert.match(reply.content, /見つからなかった/);
 });
+
+test('formatPriceReply includes the store short description when available', () => {
+  const detail = { id: '1', name: 'Sale Game', finalPrice: 750, originalPrice: 1000, discountPercent: 25, shortDescription: '骨太アクションRPG。' };
+  const reply = formatPriceReply('Sale Game', detail);
+  assert.match(reply.embeds[0].description, /骨太アクションRPG/);
+});
+
+test('formatPriceReply omits the description field when no short description is available', () => {
+  const detail = { id: '1', name: 'Sale Game', finalPrice: 750, originalPrice: 1000, discountPercent: 25 };
+  const reply = formatPriceReply('Sale Game', detail);
+  assert.equal(reply.embeds[0].description, undefined);
+});

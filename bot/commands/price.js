@@ -7,15 +7,15 @@ function formatPriceReply(gameName, detail) {
     return { content: '「' + gameName + '」が見つからなかった…' };
   }
   var priceLine = priceFormat.formatPriceLine(detail);
-  return {
-    embeds: [{
-      title: detail.name,
-      url: steamLib.storeUrl(detail.id),
-      color: 0x66c0f4,
-      image: { url: steamLib.headerImageUrl(detail.id) },
-      fields: [{ name: '価格', value: priceLine, inline: true }]
-    }]
+  var embed = {
+    title: detail.name,
+    url: steamLib.storeUrl(detail.id),
+    color: 0x66c0f4,
+    image: { url: steamLib.headerImageUrl(detail.id) },
+    fields: [{ name: '価格', value: priceLine, inline: true }]
   };
+  if (detail.shortDescription) embed.description = detail.shortDescription;
+  return { embeds: [embed] };
 }
 
 async function handlePriceCommand(interaction, steamLib) {
