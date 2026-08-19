@@ -186,7 +186,8 @@ client.on(Events.InteractionCreate, function (interaction) {
       return statsCommand.handleStatsCommand(interaction, {
         searchGame: steamLib.searchGame,
         fetchPlayerCount: steamLib.fetchPlayerCount,
-        fetchAchievementStats: steamLib.fetchAchievementStats
+        fetchAchievementStats: steamLib.fetchAchievementStats,
+        fetchReviewSummary: steamLib.fetchReviewSummary
       });
     },
     news: function () {

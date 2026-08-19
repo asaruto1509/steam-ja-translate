@@ -1,13 +1,16 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
 
-function formatStatsReply(gameName, appid, playerCount, achievementStats) {
+function formatStatsReply(gameName, appid, playerCount, achievementStats, reviewSummary) {
   if (!appid || playerCount === null || playerCount === undefined) {
     return { content: '「' + gameName + '」の統計情報が見つからなかった…' };
   }
   var fields = [
     { name: '🔥 プレイヤー数(同時接続)', value: playerCount.toLocaleString() + '人', inline: true }
   ];
+  if (reviewSummary) {
+    fields.push({ name: '💬 レビュー', value: reviewSummary.positivePct + '% (' + reviewSummary.totalReviews.toLocaleString() + '件)', inline: true });
+  }
   if (achievementStats) {
     fields.push({
       name: '🏆 実績',
@@ -33,7 +36,8 @@ async function handleStatsCommand(interaction, deps) {
   var found = await deps.searchGame(gameName);
   var playerCount = found ? await deps.fetchPlayerCount(found.id) : null;
   var achievementStats = found ? await deps.fetchAchievementStats(found.id) : null;
-  await interaction.editReply(formatStatsReply(found ? found.name : gameName, found ? found.id : null, playerCount, achievementStats));
+  var reviewSummary = found ? await deps.fetchReviewSummary(found.id) : null;
+  await interaction.editReply(formatStatsReply(found ? found.name : gameName, found ? found.id : null, playerCount, achievementStats, reviewSummary));
 }
 
 module.exports = { formatStatsReply: formatStatsReply, handleStatsCommand: handleStatsCommand };
