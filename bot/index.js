@@ -285,6 +285,7 @@ client.on(Events.InteractionCreate, function (interaction) {
       return hypeCommand.handleHypeCommand(interaction, {
         searchGame: steamLib.searchGame,
         fetchReviews: steamLib.fetchReviewTexts,
+        fetchPriceDetail: steamLib.fetchPriceDetail,
         fetchChatReply: chat.fetchChatReply
       });
     },

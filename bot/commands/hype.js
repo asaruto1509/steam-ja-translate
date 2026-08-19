@@ -1,5 +1,6 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var priceFormat = require('../lib/priceFormat.js');
 
 function buildHypePrompt(gameName, reviewTexts) {
   var joined = reviewTexts.join('\n---\n').slice(0, 3000);
@@ -43,11 +44,11 @@ var FAILURE_MESSAGES = {
   parse_failed: 'のキャッチコピー生成にちょっと失敗した…もう一度試してみて'
 };
 
-function formatHypeReply(gameName, result, appid, failureReason) {
+function formatHypeReply(gameName, result, appid, failureReason, priceDetail) {
   if (!result) {
     return { content: '「' + gameName + '」' + (FAILURE_MESSAGES[failureReason] || FAILURE_MESSAGES.not_found) };
   }
-  var fields = [];
+  var fields = [{ name: '💴 価格', value: priceFormat.formatPriceLine(priceDetail), inline: true }];
   if (result.goodPoints && result.goodPoints.length) {
     fields.push({ name: '✓ 良い点', value: result.goodPoints.map(function (p) { return '・' + p; }).join('\n'), inline: true });
   }
@@ -87,7 +88,8 @@ async function handleHypeCommand(interaction, deps) {
       }
     }
   }
-  await interaction.editReply(formatHypeReply(found ? found.name : gameName, result, found ? found.id : null, failureReason));
+  var priceDetail = (found && result) ? await deps.fetchPriceDetail(found.id) : null;
+  await interaction.editReply(formatHypeReply(found ? found.name : gameName, result, found ? found.id : null, failureReason, priceDetail));
 }
 
 module.exports = {

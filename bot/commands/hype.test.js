@@ -22,14 +22,16 @@ test('parseHypeResult returns null for unparsable text', () => {
   assert.equal(parseHypeResult('日本語の文章だけでJSONが無い'), null);
 });
 
-test('formatHypeReply builds an embed with catchphrase and points', () => {
+test('formatHypeReply builds an embed with price, catchphrase, and points', () => {
   const result = { catchphrase: '洞窟に潜れ', goodPoints: ['探索が楽しい', '音楽が良い'], cautionPoints: ['操作が難しい'] };
-  const reply = formatHypeReply('Hollow Knight', result, '367520', null);
+  const priceDetail = { finalPrice: 1000, originalPrice: 1000, discountPercent: 0 };
+  const reply = formatHypeReply('Hollow Knight', result, '367520', null, priceDetail);
   const embed = reply.embeds[0];
   assert.equal(embed.title, 'Hollow Knight');
   assert.match(embed.description, /洞窟に潜れ/);
-  assert.match(embed.fields[0].value, /探索が楽しい/);
-  assert.match(embed.fields[1].value, /操作が難しい/);
+  assert.match(embed.fields[0].value, /¥1,000/);
+  assert.match(embed.fields[1].value, /探索が楽しい/);
+  assert.match(embed.fields[2].value, /操作が難しい/);
   assert.equal(embed.url, 'https://store.steampowered.com/app/367520/');
 });
 
@@ -75,9 +77,11 @@ test('handleHypeCommand fetches reviews and formats the AI result on success', a
   const deps = {
     searchGame: async () => ({ id: '367520', name: 'Hollow Knight' }),
     fetchReviews: async () => ['探索が楽しい', '難易度が高い'],
-    fetchChatReply: async () => '{"catchphrase":"洞窟に潜れ","goodPoints":["探索が楽しい"],"cautionPoints":["操作が難しい"]}'
+    fetchChatReply: async () => '{"catchphrase":"洞窟に潜れ","goodPoints":["探索が楽しい"],"cautionPoints":["操作が難しい"]}',
+    fetchPriceDetail: async () => ({ finalPrice: 1000, originalPrice: 1000, discountPercent: 0 })
   };
   await handleHypeCommand(interaction, deps);
   assert.equal(replied.embeds[0].title, 'Hollow Knight');
   assert.match(replied.embeds[0].description, /洞窟に潜れ/);
+  assert.match(replied.embeds[0].fields[0].value, /¥1,000/);
 });
