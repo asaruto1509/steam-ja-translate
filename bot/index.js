@@ -26,6 +26,7 @@ var coopCommand = require('./commands/coop.js');
 var detectiveCommand = require('./commands/detective.js');
 var detectiveLib = require('./lib/detective.js');
 var battleCommand = require('./commands/battle.js');
+var redesignCommand = require('./commands/redesign.js');
 var autocomplete = require('./lib/autocomplete.js');
 var gamePool = require('./lib/gamePool.js');
 
@@ -75,6 +76,8 @@ var commands = [
     .addStringOption(function (opt) { return opt.setName('tastes').setDescription('メンバーそれぞれの好み(例: FPS好き、農業好き、ホラー好き)').setRequired(true); }),
   new SlashCommandBuilder().setName('detective').setDescription('AIが選んだ秘密のゲームをYes/No質問で当てるスレッドゲームを開始'),
   new SlashCommandBuilder().setName('battle').setDescription('好評派と不評派のレビューをAIが討論形式で対決させる')
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
+  new SlashCommandBuilder().setName('redesign').setDescription('低評価レビューを元にAIが愛のある大型アップデート企画書をでっち上げる')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
 ].map(function (c) { return c.toJSON(); });
 
@@ -285,6 +288,13 @@ client.on(Events.InteractionCreate, function (interaction) {
     },
     battle: function () {
       return battleCommand.handleBattleCommand(interaction, {
+        searchGame: steamLib.searchGame,
+        fetchOpposingReviews: steamLib.fetchOpposingReviews,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    redesign: function () {
+      return redesignCommand.handleRedesignCommand(interaction, {
         searchGame: steamLib.searchGame,
         fetchOpposingReviews: steamLib.fetchOpposingReviews,
         fetchChatReply: chat.fetchChatReply
