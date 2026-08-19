@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { appendHistory, buildChatPrompt, extractGameMentions, buildMentionEmbed, needsTranslation, buildTranslatePrompt } = require('./chat.js');
+const { appendHistory, buildChatPrompt, extractGameMentions, buildMentionEmbed, needsTranslation, buildTranslatePrompt, stripThinkBlock } = require('./chat.js');
 
 test('appendHistory adds an entry and keeps existing channels untouched', () => {
   const history = { 'other-channel': [{ author: 'X', text: 'hi' }] };
@@ -98,4 +98,23 @@ test('buildTranslatePrompt includes the source text', () => {
 test('buildMentionEmbed shows a fallback price line when the price detail is unavailable', () => {
   const embed = buildMentionEmbed({ id: '1', name: 'Some Game' }, null);
   assert.match(embed.fields[0].value, /価格情報なし/);
+});
+
+test('stripThinkBlock removes a well-formed <think> block and keeps the answer after it', () => {
+  const raw = '<think>ユーザーは猫について聞いている…</think>猫は可愛い動物です。';
+  assert.equal(stripThinkBlock(raw), '猫は可愛い動物です。');
+});
+
+test('stripThinkBlock drops everything from an unterminated <think> block (model got cut off)', () => {
+  const raw = '前置きなし\n<think>まだ考え中で閉じタグが来ないまま切れた';
+  assert.equal(stripThinkBlock(raw), '前置きなし');
+});
+
+test('stripThinkBlock returns the text unchanged when there is no think block', () => {
+  assert.equal(stripThinkBlock('普通の返答だよ'), '普通の返答だよ');
+});
+
+test('stripThinkBlock returns an empty string for empty or missing input', () => {
+  assert.equal(stripThinkBlock(''), '');
+  assert.equal(stripThinkBlock(null), '');
 });

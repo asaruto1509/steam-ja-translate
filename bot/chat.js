@@ -67,6 +67,16 @@ function buildTranslatePrompt(text) {
   return '次の英語のSteamゲーム紹介文を、自然な日本語に1〜2文で要約翻訳してください。翻訳文以外は出力しないでください。\n\n' + text;
 }
 
+// qwen3系の推論モデルは<think>...</think>を出力に混ぜてくることがあり、
+// これまでJSON応答を扱う一部コマンドだけが個別に除去していた。素の文章を返す
+// 大半のAIコマンドでは除去していなかったため、ここfetchChatReply側で一括して除去する。
+function stripThinkBlock(text) {
+  var cleaned = (text || '').replace(/<think>[\s\S]*?<\/think>/gi, '');
+  // 出力トークン制限等で閉じタグが欠落した場合のフォールバック。開始タグ以降を丸ごと落とす。
+  cleaned = cleaned.replace(/<think>[\s\S]*$/gi, '');
+  return cleaned.trim();
+}
+
 async function fetchChatReply(prompt, apiKey, options) {
   var webSearch = (options && options.webSearch) || false;
   var body = {
@@ -82,7 +92,7 @@ async function fetchChatReply(prompt, apiKey, options) {
   var d = await r.json();
   if (!r.ok || d.errorCode) throw new Error(d.message || String(r.status));
   var text = (d.aiRecord && d.aiRecord.aiRecordDetail && d.aiRecord.aiRecordDetail.resultObject && d.aiRecord.aiRecordDetail.resultObject[0]) || '';
-  return text.trim();
+  return stripThinkBlock(text);
 }
 
 async function handleChatMessage(message, historyStore, apiKey, options) {
@@ -134,6 +144,7 @@ module.exports = {
   buildMentionEmbed: buildMentionEmbed,
   needsTranslation: needsTranslation,
   buildTranslatePrompt: buildTranslatePrompt,
+  stripThinkBlock: stripThinkBlock,
   fetchChatReply: fetchChatReply,
   handleChatMessage: handleChatMessage
 };
