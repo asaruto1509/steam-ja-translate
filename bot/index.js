@@ -22,6 +22,7 @@ var hiddenGemCommand = require('./commands/hiddengem.js');
 var challengeCommand = require('./commands/challenge.js');
 var mashupCommand = require('./commands/mashup.js');
 var hypeCommand = require('./commands/hype.js');
+var coopCommand = require('./commands/coop.js');
 var autocomplete = require('./lib/autocomplete.js');
 var gamePool = require('./lib/gamePool.js');
 
@@ -66,7 +67,9 @@ var commands = [
     .addStringOption(function (opt) { return opt.setName('genre_a').setDescription('ジャンル1').setRequired(true); })
     .addStringOption(function (opt) { return opt.setName('genre_b').setDescription('ジャンル2').setRequired(true); }),
   new SlashCommandBuilder().setName('hype').setDescription('レビューをAIが要約してキャッチコピー化')
-    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
+  new SlashCommandBuilder().setName('coop').setDescription('バラバラな好みのメンバー全員が遊べるマルチゲームと折衷プランをAIが提案')
+    .addStringOption(function (opt) { return opt.setName('tastes').setDescription('メンバーそれぞれの好み(例: FPS好き、農業好き、ホラー好き)').setRequired(true); })
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
@@ -247,6 +250,14 @@ client.on(Events.InteractionCreate, function (interaction) {
         searchGame: steamLib.searchGame,
         fetchReviews: checkWishlistPrices.fetchReviews,
         fetchChatReply: chat.fetchChatReply
+      });
+    },
+    coop: function () {
+      return coopCommand.handleCoopCommand(interaction, {
+        fetchChatReply: chat.fetchChatReply,
+        searchGame: steamLib.searchGame,
+        fetchGameContext: steamLib.fetchGameContext,
+        fetchPriceDetail: steamLib.fetchPriceDetail
       });
     }
   };
