@@ -21,6 +21,7 @@ var moodCommand = require('./commands/mood.js');
 var hiddenGemCommand = require('./commands/hiddengem.js');
 var challengeCommand = require('./commands/challenge.js');
 var mashupCommand = require('./commands/mashup.js');
+var hypeCommand = require('./commands/hype.js');
 var autocomplete = require('./lib/autocomplete.js');
 var gamePool = require('./lib/gamePool.js');
 
@@ -63,7 +64,9 @@ var commands = [
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('mashup').setDescription('2つのジャンルを掛け合わせたゲームを探す')
     .addStringOption(function (opt) { return opt.setName('genre_a').setDescription('ジャンル1').setRequired(true); })
-    .addStringOption(function (opt) { return opt.setName('genre_b').setDescription('ジャンル2').setRequired(true); })
+    .addStringOption(function (opt) { return opt.setName('genre_b').setDescription('ジャンル2').setRequired(true); }),
+  new SlashCommandBuilder().setName('hype').setDescription('レビューをAIが要約してキャッチコピー化')
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
@@ -236,6 +239,13 @@ client.on(Events.InteractionCreate, function (interaction) {
       return mashupCommand.handleMashupCommand(interaction, {
         searchGame: steamLib.searchGame,
         fetchGameContext: steamLib.fetchGameContext,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    hype: function () {
+      return hypeCommand.handleHypeCommand(interaction, {
+        searchGame: steamLib.searchGame,
+        fetchReviews: checkWishlistPrices.fetchReviews,
         fetchChatReply: chat.fetchChatReply
       });
     }
