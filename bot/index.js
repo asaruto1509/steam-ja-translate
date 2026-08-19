@@ -265,7 +265,9 @@ client.on(Events.InteractionCreate, function (interaction) {
     },
     mashup: function () {
       return mashupCommand.handleMashupCommand(interaction, {
-        searchGame: steamLib.searchGame,
+        searchGameChoices: steamLib.searchGameChoices,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
         fetchGameContext: steamLib.fetchGameContext,
         fetchChatReply: chat.fetchChatReply
       });

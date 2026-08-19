@@ -28,7 +28,9 @@ async function handleMashupCommand(interaction, deps) {
   var genreB = interaction.options.getString('genre_b');
   var apiKey = process.env.ONEMIN_API_KEY;
   await interaction.deferReply();
-  var found = await deps.searchGame(genreA + ' ' + genreB);
+  // ジャンル語同士の検索はDLC/サントラ等がヒットしやすいため、先頭1件を鵜呑みにせず本編判定を通す。
+  var candidates = await deps.searchGameChoices(genreA + ' ' + genreB);
+  var found = (await deps.pickRealGames(candidates, 1, deps.isRealGame, 10))[0] || null;
   var blurb = null;
   if (found && apiKey) {
     var gameContext = await deps.fetchGameContext(found.id);
