@@ -53,7 +53,7 @@ var commands = [
   new SlashCommandBuilder().setName('recommend').setDescription('その場でAIおすすめゲームを紹介'),
   new SlashCommandBuilder().setName('ask').setDescription('ゲームについてAIに質問する(Web検索あり)')
     .addStringOption(function (opt) { return opt.setName('game').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
-    .addStringOption(function (opt) { return opt.setName('question').setDescription('質問内容').setRequired(true); }),
+    .addStringOption(function (opt) { return opt.setName('question').setDescription('質問内容').setRequired(true).setMaxLength(300); }),
   new SlashCommandBuilder().setName('stats').setDescription('現在の同時接続数と実績統計を調べる')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('news').setDescription('最新アップデート情報をAIが要約')
@@ -66,17 +66,17 @@ var commands = [
   new SlashCommandBuilder().setName('upcoming').setDescription('近日リリース予定のタイトルを紹介'),
   new SlashCommandBuilder().setName('quiz').setDescription('ヒントからゲームを当てるクイズを出題'),
   new SlashCommandBuilder().setName('mood').setDescription('今の気分に合うゲームをAIが探す')
-    .addStringOption(function (opt) { return opt.setName('query').setDescription('気分・要望(例: まったり農業したい)').setRequired(true); }),
+    .addStringOption(function (opt) { return opt.setName('query').setDescription('気分・要望(例: まったり農業したい)').setRequired(true).setMaxLength(200); }),
   new SlashCommandBuilder().setName('hiddengem').setDescription('高評価なのに過疎ってる隠れた名作を発掘'),
   new SlashCommandBuilder().setName('challenge').setDescription('レア実績を使った縛りプレイ企画をAIが提案')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('mashup').setDescription('2つのジャンルを掛け合わせたゲームを探す')
-    .addStringOption(function (opt) { return opt.setName('genre_a').setDescription('ジャンル1').setRequired(true); })
-    .addStringOption(function (opt) { return opt.setName('genre_b').setDescription('ジャンル2').setRequired(true); }),
+    .addStringOption(function (opt) { return opt.setName('genre_a').setDescription('ジャンル1').setRequired(true).setMaxLength(50); })
+    .addStringOption(function (opt) { return opt.setName('genre_b').setDescription('ジャンル2').setRequired(true).setMaxLength(50); }),
   new SlashCommandBuilder().setName('hype').setDescription('レビューをAIが要約してキャッチコピー化')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('coop').setDescription('バラバラな好みのメンバー全員が遊べるマルチゲームと折衷プランをAIが提案')
-    .addStringOption(function (opt) { return opt.setName('tastes').setDescription('メンバーそれぞれの好み(例: FPS好き、農業好き、ホラー好き)').setRequired(true); }),
+    .addStringOption(function (opt) { return opt.setName('tastes').setDescription('メンバーそれぞれの好み(例: FPS好き、農業好き、ホラー好き)').setRequired(true).setMaxLength(300); }),
   new SlashCommandBuilder().setName('detective').setDescription('AIが選んだ秘密のゲームをYes/No質問で当てるスレッドゲームを開始'),
   new SlashCommandBuilder().setName('battle').setDescription('好評派と不評派のレビューをAIが討論形式で対決させる')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
@@ -84,7 +84,7 @@ var commands = [
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('survival').setDescription('指定のゲーム世界に転生したら生き残れるかAIが診断')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
-    .addStringOption(function (opt) { return opt.setName('occupation').setDescription('職業・特徴(例: フロントエンドエンジニア)').setRequired(false); }),
+    .addStringOption(function (opt) { return opt.setName('occupation').setDescription('職業・特徴(例: フロントエンドエンジニア)').setRequired(false).setMaxLength(50); }),
   new SlashCommandBuilder().setName('urbanlegend').setDescription('ゲーム情報とレビューを元にAIが架空の都市伝説を調査報告書風に創作')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
 ].map(function (c) { return c.toJSON(); });
