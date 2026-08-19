@@ -27,6 +27,7 @@ var detectiveCommand = require('./commands/detective.js');
 var detectiveLib = require('./lib/detective.js');
 var battleCommand = require('./commands/battle.js');
 var redesignCommand = require('./commands/redesign.js');
+var threadCleanup = require('./lib/threadCleanup.js');
 var survivalCommand = require('./commands/survival.js');
 var urbanLegendCommand = require('./commands/urbanlegend.js');
 var autocomplete = require('./lib/autocomplete.js');
@@ -127,6 +128,14 @@ client.on(Events.MessageCreate, function (message) {
   chat.handleChatMessage(message, historyStore, apiKey, { webSearch: isAskThread, searchGame: steamLib.searchGame, fetchPriceDetail: steamLib.fetchPriceDetail }).catch(function (e) {
     console.error('チャット処理でエラー: ' + e.message);
   });
+});
+
+// /askや/detectiveのスレッド状態は作成時に増える一方だったため、
+// アーカイブされたタイミングでaskThreadIds/detectiveThreads/historyStoreから掃除する。
+client.on(Events.ThreadUpdate, function (oldThread, newThread) {
+  if (newThread.archived) {
+    threadCleanup.cleanupArchivedThread(newThread.id, { askThreadIds: askThreadIds, detectiveThreads: detectiveThreads, historyStore: historyStore });
+  }
 });
 
 client.on(Events.InteractionCreate, function (interaction) {
