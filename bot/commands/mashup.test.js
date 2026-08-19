@@ -15,12 +15,14 @@ test('buildMashupPrompt includes real game context when given', () => {
   assert.match(prompt, /カードゲーム/);
 });
 
-test('formatMashupReply shows the matched game with the AI blurb', () => {
+test('formatMashupReply shows the matched game with the AI blurb and price', () => {
   const game = { id: '1', name: 'Inscryption' };
-  const reply = formatMashupReply('ホラー', 'パズル', game, 'カードゲームとホラー演出が融合した異色作。');
+  const priceDetail = { finalPrice: 1980, originalPrice: 1980, discountPercent: 0 };
+  const reply = formatMashupReply('ホラー', 'パズル', game, 'カードゲームとホラー演出が融合した異色作。', priceDetail);
   assert.equal(reply.embeds[0].title, 'Inscryption');
   assert.match(reply.embeds[0].description, /カードゲーム/);
   assert.equal(reply.embeds[0].url, 'https://store.steampowered.com/app/1/');
+  assert.match(reply.embeds[0].fields[0].value, /¥1,980/);
 });
 
 test('formatMashupReply returns a not-found message when nothing matched', () => {

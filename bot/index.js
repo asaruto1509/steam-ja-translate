@@ -250,6 +250,7 @@ client.on(Events.InteractionCreate, function (interaction) {
         pickRealGames: gamePool.pickRealGames,
         isRealGame: steamLib.isRealGame,
         fetchGameContext: steamLib.fetchGameContext,
+        fetchPriceDetail: steamLib.fetchPriceDetail,
         fetchChatReply: chat.fetchChatReply
       });
     },
@@ -262,6 +263,7 @@ client.on(Events.InteractionCreate, function (interaction) {
         fetchReviewSummary: steamLib.fetchReviewSummary,
         fetchPlayerCount: steamLib.fetchPlayerCount,
         fetchGameContext: steamLib.fetchGameContext,
+        fetchPriceDetail: steamLib.fetchPriceDetail,
         fetchChatReply: chat.fetchChatReply
       });
     },
@@ -279,6 +281,7 @@ client.on(Events.InteractionCreate, function (interaction) {
         pickRealGames: gamePool.pickRealGames,
         isRealGame: steamLib.isRealGame,
         fetchGameContext: steamLib.fetchGameContext,
+        fetchPriceDetail: steamLib.fetchPriceDetail,
         fetchChatReply: chat.fetchChatReply
       });
     },

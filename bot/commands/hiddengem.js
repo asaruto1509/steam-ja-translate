@@ -1,5 +1,6 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var priceFormat = require('../lib/priceFormat.js');
 var promptContext = require('../lib/promptContext.js');
 
 function pickHiddenGem(candidates, minPositivePct, maxPlayerCount) {
@@ -16,7 +17,7 @@ function buildHiddenGemPrompt(gameName, gameContext) {
     + 'なぜ埋もれているのに面白いのか、気さくなタメ口寄りの日本語で1〜2文で紹介してください。前置きは不要です。';
 }
 
-function formatHiddenGemReply(game, blurb) {
+function formatHiddenGemReply(game, blurb, priceDetail) {
   if (!game) {
     return { content: '条件に合う隠れた名作が見つからなかった…' };
   }
@@ -27,7 +28,10 @@ function formatHiddenGemReply(game, blurb) {
       color: 0x66c0f4,
       description: blurb || 'うまく紹介文を生成できなかった…',
       image: { url: steamLib.headerImageUrl(game.id) },
-      fields: [{ name: '💎 発掘データ', value: 'ポジティブ率 ' + game.positivePct + '% / 同時接続 ' + game.playerCount.toLocaleString() + '人', inline: true }]
+      fields: [
+        { name: '💎 発掘データ', value: 'ポジティブ率 ' + game.positivePct + '% / 同時接続 ' + game.playerCount.toLocaleString() + '人', inline: true },
+        { name: '💴 価格', value: priceFormat.formatPriceLine(priceDetail), inline: true }
+      ]
     }]
   };
 }
@@ -45,11 +49,15 @@ async function handleHiddenGemCommand(interaction, deps) {
   }));
   var gem = pickHiddenGem(candidates, 85, 300);
   var blurb = null;
-  if (gem && apiKey) {
-    var gameContext = await deps.fetchGameContext(gem.id);
-    blurb = await deps.fetchChatReply(buildHiddenGemPrompt(gem.name, gameContext), apiKey, { webSearch: false });
+  var priceDetail = null;
+  if (gem) {
+    priceDetail = await deps.fetchPriceDetail(gem.id);
+    if (apiKey) {
+      var gameContext = await deps.fetchGameContext(gem.id);
+      blurb = await deps.fetchChatReply(buildHiddenGemPrompt(gem.name, gameContext), apiKey, { webSearch: false });
+    }
   }
-  await interaction.editReply(formatHiddenGemReply(gem, blurb));
+  await interaction.editReply(formatHiddenGemReply(gem, blurb, priceDetail));
 }
 
 module.exports = {

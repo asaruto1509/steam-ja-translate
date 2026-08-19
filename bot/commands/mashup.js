@@ -1,5 +1,6 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var priceFormat = require('../lib/priceFormat.js');
 var promptContext = require('../lib/promptContext.js');
 
 function buildMashupPrompt(genreA, genreB, gameName, gameContext) {
@@ -7,7 +8,7 @@ function buildMashupPrompt(genreA, genreB, gameName, gameContext) {
     + 'このゲームが両方の要素をどう融合しているか、気さくなタメ口寄りの日本語で1〜2文で紹介してください。前置きは不要です。';
 }
 
-function formatMashupReply(genreA, genreB, game, blurb) {
+function formatMashupReply(genreA, genreB, game, blurb, priceDetail) {
   if (!game) {
     return { content: '「' + genreA + '」×「' + genreB + '」に合いそうなゲームが見つからなかった…' };
   }
@@ -18,6 +19,7 @@ function formatMashupReply(genreA, genreB, game, blurb) {
       color: 0x66c0f4,
       description: blurb || 'うまく紹介文を生成できなかった…',
       image: { url: steamLib.headerImageUrl(game.id) },
+      fields: [{ name: '💴 価格', value: priceFormat.formatPriceLine(priceDetail), inline: true }],
       footer: { text: genreA + ' × ' + genreB }
     }]
   };
@@ -32,11 +34,15 @@ async function handleMashupCommand(interaction, deps) {
   var candidates = await deps.searchGameChoices(genreA + ' ' + genreB);
   var found = (await deps.pickRealGames(candidates, 1, deps.isRealGame, 10))[0] || null;
   var blurb = null;
-  if (found && apiKey) {
-    var gameContext = await deps.fetchGameContext(found.id);
-    blurb = await deps.fetchChatReply(buildMashupPrompt(genreA, genreB, found.name, gameContext), apiKey, { webSearch: false });
+  var priceDetail = null;
+  if (found) {
+    priceDetail = await deps.fetchPriceDetail(found.id);
+    if (apiKey) {
+      var gameContext = await deps.fetchGameContext(found.id);
+      blurb = await deps.fetchChatReply(buildMashupPrompt(genreA, genreB, found.name, gameContext), apiKey, { webSearch: false });
+    }
   }
-  await interaction.editReply(formatMashupReply(genreA, genreB, found, blurb));
+  await interaction.editReply(formatMashupReply(genreA, genreB, found, blurb, priceDetail));
 }
 
 module.exports = {

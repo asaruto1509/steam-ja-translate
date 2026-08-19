@@ -28,12 +28,14 @@ test('buildHiddenGemPrompt includes real game context when given', () => {
   assert.match(prompt, /パズル/);
 });
 
-test('formatHiddenGemReply shows the game with its stats and AI blurb', () => {
+test('formatHiddenGemReply shows the game with its stats, price, and AI blurb', () => {
   const game = { id: '2', name: 'Quiet Gem', positivePct: 92, playerCount: 80 };
-  const reply = formatHiddenGemReply(game, '知る人ぞ知る名作。');
+  const priceDetail = { finalPrice: 500, originalPrice: 500, discountPercent: 0 };
+  const reply = formatHiddenGemReply(game, '知る人ぞ知る名作。', priceDetail);
   assert.equal(reply.embeds[0].title, 'Quiet Gem');
   assert.match(reply.embeds[0].description, /知る人ぞ知る/);
   assert.match(reply.embeds[0].fields[0].value, /92%/);
+  assert.match(reply.embeds[0].fields[1].value, /¥500/);
 });
 
 test('formatHiddenGemReply returns a not-found message when no gem was picked', () => {

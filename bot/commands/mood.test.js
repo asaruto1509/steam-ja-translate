@@ -19,11 +19,13 @@ test('buildMoodReasonPrompt includes real game context when given', () => {
   assert.match(prompt, /シミュレーション/);
 });
 
-test('formatMoodReply shows the matched game with the AI reasoning', () => {
-  const reply = formatMoodReply('まったり農業したい', { id: '1', name: 'Stardew Valley' }, 'のんびり農業と町づくりが楽しめる名作。');
+test('formatMoodReply shows the matched game with the AI reasoning and price', () => {
+  const priceDetail = { finalPrice: 1000, originalPrice: 1000, discountPercent: 0 };
+  const reply = formatMoodReply('まったり農業したい', { id: '1', name: 'Stardew Valley' }, 'のんびり農業と町づくりが楽しめる名作。', priceDetail);
   assert.equal(reply.embeds[0].title, 'Stardew Valley');
   assert.match(reply.embeds[0].description, /のんびり農業/);
   assert.equal(reply.embeds[0].url, 'https://store.steampowered.com/app/1/');
+  assert.match(reply.embeds[0].fields[0].value, /¥1,000/);
 });
 
 test('formatMoodReply returns a not-found message when nothing matched', () => {
