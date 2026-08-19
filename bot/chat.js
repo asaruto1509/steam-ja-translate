@@ -1,6 +1,10 @@
 'use strict';
 var steamLib = require('./lib/steam.js');
 var priceFormat = require('./lib/priceFormat.js');
+var fetchWithTimeout = require('./lib/fetchWithTimeout.js').fetchWithTimeout;
+
+// AI応答はWeb検索や推論を伴い数十秒かかることがあるため、Steam API向けの短いデフォルトより長めに取る。
+var AI_FETCH_TIMEOUT_MS = 45000;
 
 var MAX_HISTORY = 6;
 
@@ -70,11 +74,11 @@ async function fetchChatReply(prompt, apiKey, options) {
     model: 'qwen3-8b',
     promptObject: { prompt: prompt, settings: { historySettings: { isMixed: false, historyMessageLimit: 0 }, webSearchSettings: { webSearch: webSearch } } }
   };
-  var r = await fetch('https://api.1min.ai/api/chat-with-ai', {
+  var r = await fetchWithTimeout('https://api.1min.ai/api/chat-with-ai', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'API-KEY': apiKey },
     body: JSON.stringify(body)
-  });
+  }, AI_FETCH_TIMEOUT_MS);
   var d = await r.json();
   if (!r.ok || d.errorCode) throw new Error(d.message || String(r.status));
   var text = (d.aiRecord && d.aiRecord.aiRecordDetail && d.aiRecord.aiRecordDetail.resultObject && d.aiRecord.aiRecordDetail.resultObject[0]) || '';
