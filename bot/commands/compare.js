@@ -1,17 +1,12 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var priceFormat = require('../lib/priceFormat.js');
 
 function buildCompareAnalysisPrompt(a, b) {
   return 'あなたはSteamゲーム比較AIです。以下の2本のゲームを比較してください。\n\n'
-    + 'A: ' + a.name + ' (価格¥' + a.finalPrice + ', ポジティブ率' + a.positivePct + '%)\n'
-    + 'B: ' + b.name + ' (価格¥' + b.finalPrice + ', ポジティブ率' + b.positivePct + '%)\n\n'
+    + 'A: ' + a.name + ' (価格' + priceFormat.formatPriceLine(a.detail) + ', ポジティブ率' + (typeof a.positivePct === 'number' ? a.positivePct + '%' : '不明') + ')\n'
+    + 'B: ' + b.name + ' (価格' + priceFormat.formatPriceLine(b.detail) + ', ポジティブ率' + (typeof b.positivePct === 'number' ? b.positivePct + '%' : '不明') + ')\n\n'
     + 'ゲーム性の違い、それぞれどんな人におすすめかを、気さくなタメ口寄りの日本語で3〜4文にまとめてください。前置きは不要です。';
-}
-
-function priceLine(g) {
-  if (g.finalPrice === 0) return '無料';
-  if (g.discountPercent > 0) return '~~¥' + g.originalPrice.toLocaleString() + '~~ → **¥' + g.finalPrice.toLocaleString() + '** (-' + g.discountPercent + '%)';
-  return '¥' + g.finalPrice.toLocaleString();
 }
 
 function formatCompareReply(a, b, aiSummary, missingName) {
@@ -24,8 +19,8 @@ function formatCompareReply(a, b, aiSummary, missingName) {
       color: 0x66c0f4,
       description: aiSummary || 'うまく比較を生成できなかった…',
       fields: [
-        { name: '💴 ' + a.name, value: priceLine(a) + (typeof a.positivePct === 'number' ? '\nポジティブ率 ' + a.positivePct + '%' : ''), inline: true },
-        { name: '💴 ' + b.name, value: priceLine(b) + (typeof b.positivePct === 'number' ? '\nポジティブ率 ' + b.positivePct + '%' : ''), inline: true }
+        { name: '💴 ' + a.name, value: priceFormat.formatPriceLine(a.detail) + (typeof a.positivePct === 'number' ? '\nポジティブ率 ' + a.positivePct + '%' : ''), inline: true },
+        { name: '💴 ' + b.name, value: priceFormat.formatPriceLine(b.detail) + (typeof b.positivePct === 'number' ? '\nポジティブ率 ' + b.positivePct + '%' : ''), inline: true }
       ]
     }]
   };
@@ -49,8 +44,8 @@ async function handleCompareCommand(interaction, deps) {
   var summaryA = await deps.fetchReviewSummary(foundA.id);
   var summaryB = await deps.fetchReviewSummary(foundB.id);
 
-  var a = { id: foundA.id, name: foundA.name, finalPrice: detailA ? detailA.finalPrice : 0, originalPrice: detailA ? detailA.originalPrice : 0, discountPercent: detailA ? detailA.discountPercent : 0, positivePct: summaryA ? summaryA.positivePct : null };
-  var b = { id: foundB.id, name: foundB.name, finalPrice: detailB ? detailB.finalPrice : 0, originalPrice: detailB ? detailB.originalPrice : 0, discountPercent: detailB ? detailB.discountPercent : 0, positivePct: summaryB ? summaryB.positivePct : null };
+  var a = { id: foundA.id, name: foundA.name, detail: detailA, positivePct: summaryA ? summaryA.positivePct : null };
+  var b = { id: foundB.id, name: foundB.name, detail: detailB, positivePct: summaryB ? summaryB.positivePct : null };
 
   var aiSummary = null;
   if (apiKey) {
