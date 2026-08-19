@@ -167,6 +167,20 @@ async function isRealGame(appid) {
   return true;
 }
 
+// /battle用。討論を成立させるため好評/不評レビューを別々に取得する。
+async function fetchOpposingReviews(appid, count) {
+  async function fetchByType(type) {
+    var r = await fetch('https://store.steampowered.com/appreviews/' + appid
+      + '?json=1&num_per_page=' + count + '&language=japanese&review_type=' + type + '&purchase_type=all');
+    if (!r.ok) return [];
+    var d = await r.json();
+    return (d.reviews || []).map(function (rv) { return rv.review; }).filter(Boolean);
+  }
+  var positive = await fetchByType('positive');
+  var negative = await fetchByType('negative');
+  return { positive: positive, negative: negative };
+}
+
 function headerImageUrl(appid) {
   return 'https://cdn.akamai.steamstatic.com/steam/apps/' + appid + '/header.jpg';
 }
@@ -188,6 +202,7 @@ module.exports = {
   fetchUpcomingPool: fetchUpcomingPool,
   fetchRareAchievements: fetchRareAchievements,
   isRealGame: isRealGame,
+  fetchOpposingReviews: fetchOpposingReviews,
   headerImageUrl: headerImageUrl,
   storeUrl: storeUrl
 };
