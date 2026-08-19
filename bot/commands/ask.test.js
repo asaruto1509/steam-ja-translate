@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildAskPrompt, formatAskReply, buildThreadName } = require('./ask.js');
+const { buildAskPrompt, formatAskReply, buildThreadName, handleAskCommand } = require('./ask.js');
 
 test('buildAskPrompt includes the game name and question', () => {
   const prompt = buildAskPrompt('Hollow Knight', 'クリアまで何時間くらい？');
@@ -48,4 +48,20 @@ test('buildThreadName truncates long game names to fit the 100-char thread name 
   const name = buildThreadName(longName);
   assert.ok(name.length <= 100);
   assert.match(name, /について$/);
+});
+
+test('handleAskCommand replies with a friendly message and skips AI calls when no apiKey is configured', async () => {
+  let replied = null;
+  const interaction = {
+    options: { getString: (name) => (name === 'game' ? 'Hollow Knight' : '質問') },
+    deferReply: async () => {},
+    editReply: async (r) => { replied = r; }
+  };
+  const deps = {
+    apiKey: null,
+    searchGame: async () => { throw new Error('should not be called'); },
+    fetchChatReply: async () => { throw new Error('should not be called'); }
+  };
+  await handleAskCommand(interaction, deps);
+  assert.match(replied.content, /AI/);
 });

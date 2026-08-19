@@ -34,6 +34,10 @@ async function handleAskCommand(interaction, deps) {
   var rawGameName = interaction.options.getString('game');
   var question = interaction.options.getString('question');
   await interaction.deferReply();
+  if (!deps.apiKey) {
+    await interaction.editReply({ content: 'AIが使えないので回答できなかった…' });
+    return;
+  }
   var found = await deps.searchGame(rawGameName);
   var gameName = found ? found.name : rawGameName;
   var prompt = buildAskPrompt(gameName, question);
