@@ -27,6 +27,7 @@ var detectiveCommand = require('./commands/detective.js');
 var detectiveLib = require('./lib/detective.js');
 var battleCommand = require('./commands/battle.js');
 var redesignCommand = require('./commands/redesign.js');
+var survivalCommand = require('./commands/survival.js');
 var autocomplete = require('./lib/autocomplete.js');
 var gamePool = require('./lib/gamePool.js');
 
@@ -78,7 +79,10 @@ var commands = [
   new SlashCommandBuilder().setName('battle').setDescription('好評派と不評派のレビューをAIが討論形式で対決させる')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('redesign').setDescription('低評価レビューを元にAIが愛のある大型アップデート企画書をでっち上げる')
+    .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
+  new SlashCommandBuilder().setName('survival').setDescription('指定のゲーム世界に転生したら生き残れるかAIが診断')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); })
+    .addStringOption(function (opt) { return opt.setName('occupation').setDescription('職業・特徴(例: フロントエンドエンジニア)').setRequired(false); })
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
@@ -297,6 +301,14 @@ client.on(Events.InteractionCreate, function (interaction) {
       return redesignCommand.handleRedesignCommand(interaction, {
         searchGame: steamLib.searchGame,
         fetchOpposingReviews: steamLib.fetchOpposingReviews,
+        fetchChatReply: chat.fetchChatReply
+      });
+    },
+    survival: function () {
+      return survivalCommand.handleSurvivalCommand(interaction, {
+        searchGame: steamLib.searchGame,
+        fetchGameContext: steamLib.fetchGameContext,
+        fetchPriceDetail: steamLib.fetchPriceDetail,
         fetchChatReply: chat.fetchChatReply
       });
     }
