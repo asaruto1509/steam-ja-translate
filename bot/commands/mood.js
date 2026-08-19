@@ -37,7 +37,9 @@ async function handleMoodCommand(interaction, deps) {
     return;
   }
   var keywords = await deps.fetchChatReply(buildKeywordPrompt(query), apiKey, { webSearch: false });
-  var found = keywords ? await deps.searchGame(keywords.trim()) : null;
+  // 生成キーワードでの検索はDLC/サントラ等がヒットしやすいため、先頭1件を鵜呑みにせず本編判定を通す。
+  var candidates = keywords ? await deps.searchGameChoices(keywords.trim()) : [];
+  var found = (await deps.pickRealGames(candidates, 1, deps.isRealGame, 10))[0] || null;
   var reason = null;
   if (found) {
     var gameContext = await deps.fetchGameContext(found.id);

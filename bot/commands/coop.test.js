@@ -52,7 +52,9 @@ test('handleCoopCommand replies with a no-api-key message when ONEMIN_API_KEY is
   };
   const deps = {
     fetchChatReply: async () => { throw new Error('should not be called'); },
-    searchGame: async () => { throw new Error('should not be called'); },
+    searchGameChoices: async () => { throw new Error('should not be called'); },
+    pickRealGames: async () => { throw new Error('should not be called'); },
+    isRealGame: async () => true,
     fetchGameContext: async () => { throw new Error('should not be called'); },
     fetchPriceDetail: async () => { throw new Error('should not be called'); }
   };
@@ -74,7 +76,9 @@ test('handleCoopCommand searches by AI keyword and formats a full reply on succe
       calls.push(prompt);
       return calls.length === 1 ? 'deep rock galactic co-op mining' : '一人は採掘役、一人は護衛役をやろう。';
     },
-    searchGame: async () => ({ id: '248820', name: 'Deep Rock Galactic' }),
+    searchGameChoices: async () => [{ id: '248820', name: 'Deep Rock Galactic' }],
+    pickRealGames: async (candidates) => candidates.slice(0, 1),
+    isRealGame: async () => true,
     fetchGameContext: async () => ({ genres: ['アクション'], categories: ['協力プレイ'] }),
     fetchPriceDetail: async () => ({ finalPrice: 2000, originalPrice: 2000, discountPercent: 0 })
   };

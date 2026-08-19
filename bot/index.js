@@ -236,7 +236,9 @@ client.on(Events.InteractionCreate, function (interaction) {
     },
     mood: function () {
       return moodCommand.handleMoodCommand(interaction, {
-        searchGame: steamLib.searchGame,
+        searchGameChoices: steamLib.searchGameChoices,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
         fetchGameContext: steamLib.fetchGameContext,
         fetchChatReply: chat.fetchChatReply
       });
@@ -278,7 +280,9 @@ client.on(Events.InteractionCreate, function (interaction) {
     coop: function () {
       return coopCommand.handleCoopCommand(interaction, {
         fetchChatReply: chat.fetchChatReply,
-        searchGame: steamLib.searchGame,
+        searchGameChoices: steamLib.searchGameChoices,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
         fetchGameContext: steamLib.fetchGameContext,
         fetchPriceDetail: steamLib.fetchPriceDetail
       });

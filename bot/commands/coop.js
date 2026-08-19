@@ -52,7 +52,9 @@ async function handleCoopCommand(interaction, deps) {
   }
 
   var keywords = await deps.fetchChatReply(buildKeywordPrompt(tastes), apiKey, { webSearch: false });
-  var found = await deps.searchGame((keywords || '').trim() + ' multiplayer');
+  // 生成キーワードでの検索はDLC/サントラ等がヒットしやすいため、先頭1件を鵜呑みにせず本編判定を通す。
+  var candidates = await deps.searchGameChoices((keywords || '').trim() + ' multiplayer');
+  var found = (await deps.pickRealGames(candidates, 1, deps.isRealGame, 10))[0] || null;
 
   if (!found) {
     await interaction.editReply(formatCoopReply(tastes, null, null, null, 'not_found'));
