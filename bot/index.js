@@ -23,6 +23,8 @@ var challengeCommand = require('./commands/challenge.js');
 var mashupCommand = require('./commands/mashup.js');
 var hypeCommand = require('./commands/hype.js');
 var coopCommand = require('./commands/coop.js');
+var detectiveCommand = require('./commands/detective.js');
+var detectiveLib = require('./lib/detective.js');
 var autocomplete = require('./lib/autocomplete.js');
 var gamePool = require('./lib/gamePool.js');
 
@@ -69,11 +71,13 @@ var commands = [
   new SlashCommandBuilder().setName('hype').setDescription('レビューをAIが要約してキャッチコピー化')
     .addStringOption(function (opt) { return opt.setName('name').setDescription('ゲーム名').setRequired(true).setAutocomplete(true); }),
   new SlashCommandBuilder().setName('coop').setDescription('バラバラな好みのメンバー全員が遊べるマルチゲームと折衷プランをAIが提案')
-    .addStringOption(function (opt) { return opt.setName('tastes').setDescription('メンバーそれぞれの好み(例: FPS好き、農業好き、ホラー好き)').setRequired(true); })
+    .addStringOption(function (opt) { return opt.setName('tastes').setDescription('メンバーそれぞれの好み(例: FPS好き、農業好き、ホラー好き)').setRequired(true); }),
+  new SlashCommandBuilder().setName('detective').setDescription('AIが選んだ秘密のゲームをYes/No質問で当てるスレッドゲームを開始')
 ].map(function (c) { return c.toJSON(); });
 
 var historyStore = { data: {} };
 var askThreadIds = new Set();
+var detectiveThreads = new Map();
 
 var client = new Client({
   intents: [
@@ -98,6 +102,12 @@ client.once(Events.ClientReady, async function () {
 
 client.on(Events.MessageCreate, function (message) {
   if (message.author.bot) return;
+  if (detectiveThreads.has(message.channelId)) {
+    detectiveLib.handleDetectiveMessage(message, detectiveThreads, apiKey, { fetchChatReply: chat.fetchChatReply }).catch(function (e) {
+      console.error('AIゲーム探偵処理でエラー: ' + e.message);
+    });
+    return;
+  }
   var isChatChannel = !!chatChannelId && message.channelId === chatChannelId;
   var isAskThread = askThreadIds.has(message.channelId);
   if (!isChatChannel && !isAskThread) return;
@@ -258,6 +268,16 @@ client.on(Events.InteractionCreate, function (interaction) {
         searchGame: steamLib.searchGame,
         fetchGameContext: steamLib.fetchGameContext,
         fetchPriceDetail: steamLib.fetchPriceDetail
+      });
+    },
+    detective: function () {
+      return detectiveCommand.handleDetectiveCommand(interaction, {
+        fetchFeaturedPool: recommendGames.fetchFeaturedPool,
+        pickRandomGames: recommendGames.pickRandomGames,
+        pickRealGames: gamePool.pickRealGames,
+        isRealGame: steamLib.isRealGame,
+        fetchGameContext: steamLib.fetchGameContext,
+        detectiveThreads: detectiveThreads
       });
     }
   };
