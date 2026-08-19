@@ -168,17 +168,43 @@ async function isRealGame(appid) {
   return true;
 }
 
-// /battle用。討論を成立させるため好評/不評レビューを別々に取得する。
-async function fetchOpposingReviews(appid, count) {
-  async function fetchByType(type) {
-    var r = await fetchWithTimeout('https://store.steampowered.com/appreviews/' + appid
-      + '?json=1&num_per_page=' + count + '&language=japanese&review_type=' + type + '&purchase_type=all');
-    if (!r.ok) return [];
-    var d = await r.json();
-    return (d.reviews || []).map(function (rv) { return rv.review; }).filter(Boolean);
+async function fetchReviewPage(appid, count, language, type) {
+  var url = 'https://store.steampowered.com/appreviews/' + appid + '?json=1&num_per_page=' + count + '&language=' + language + '&purchase_type=all'
+    + (type ? '&review_type=' + type : '&filter=recent');
+  var r = await fetchWithTimeout(url);
+  if (!r.ok) return [];
+  var d = await r.json();
+  return (d.reviews || []).map(function (rv) { return rv.review; }).filter(Boolean);
+}
+
+// 日本語レビューだけでは母数が少なすぎるゲームがあるため、不足分を全言語レビューで補って
+// AI分析の精度を上げる(要約自体はプロンプト側で日本語出力を指示しているので元言語は問わない)。
+function mergeReviewTexts(primary, fallback, count) {
+  var merged = primary.slice();
+  for (var i = 0; i < fallback.length && merged.length < count; i++) {
+    if (merged.indexOf(fallback[i]) === -1) merged.push(fallback[i]);
   }
-  var positive = await fetchByType('positive');
-  var negative = await fetchByType('negative');
+  return merged;
+}
+
+// /review・/quiz・/recommend・/hype・/urbanlegend用。日本語優先、不足時は全言語で補完する。
+async function fetchReviewTexts(appid, count) {
+  var japanese = await fetchReviewPage(appid, count, 'japanese', null);
+  if (japanese.length >= count) return japanese;
+  var all = await fetchReviewPage(appid, count, 'all', null);
+  return mergeReviewTexts(japanese, all, count);
+}
+
+// /battle・/redesign用。討論/企画書を成立させるため好評/不評レビューを別々に取得する。
+async function fetchOpposingReviews(appid, count) {
+  async function fetchSide(type) {
+    var japanese = await fetchReviewPage(appid, count, 'japanese', type);
+    if (japanese.length >= count) return japanese;
+    var all = await fetchReviewPage(appid, count, 'all', type);
+    return mergeReviewTexts(japanese, all, count);
+  }
+  var positive = await fetchSide('positive');
+  var negative = await fetchSide('negative');
   return { positive: positive, negative: negative };
 }
 
@@ -203,6 +229,8 @@ module.exports = {
   fetchUpcomingPool: fetchUpcomingPool,
   fetchRareAchievements: fetchRareAchievements,
   isRealGame: isRealGame,
+  mergeReviewTexts: mergeReviewTexts,
+  fetchReviewTexts: fetchReviewTexts,
   fetchOpposingReviews: fetchOpposingReviews,
   headerImageUrl: headerImageUrl,
   storeUrl: storeUrl

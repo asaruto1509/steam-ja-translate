@@ -153,7 +153,7 @@ client.on(Events.InteractionCreate, function (interaction) {
         searchGame: steamLib.searchGame,
         fetchReviewSummary: steamLib.fetchReviewSummary,
         fetchGameContext: steamLib.fetchGameContext,
-        fetchReviews: checkWishlistPrices.fetchReviews,
+        fetchReviews: steamLib.fetchReviewTexts,
         fetchChatReply: chat.fetchChatReply
       });
     },
@@ -166,7 +166,7 @@ client.on(Events.InteractionCreate, function (interaction) {
         pickRandomGames: recommendGames.pickRandomGames,
         pickRealGames: gamePool.pickRealGames,
         isRealGame: steamLib.isRealGame,
-        fetchReviews: checkWishlistPrices.fetchReviews,
+        fetchReviews: steamLib.fetchReviewTexts,
         fetchGameAnalysis: recommendGames.fetchGameAnalysis,
         buildHeaderEmbed: recommendGames.buildHeaderEmbed,
         buildRecommendEmbeds: recommendGames.buildRecommendEmbeds
@@ -239,7 +239,7 @@ client.on(Events.InteractionCreate, function (interaction) {
         pickRandomGames: recommendGames.pickRandomGames,
         pickRealGames: gamePool.pickRealGames,
         isRealGame: steamLib.isRealGame,
-        fetchReviews: checkWishlistPrices.fetchReviews,
+        fetchReviews: steamLib.fetchReviewTexts,
         fetchChatReply: chat.fetchChatReply
       });
     },
@@ -284,7 +284,7 @@ client.on(Events.InteractionCreate, function (interaction) {
     hype: function () {
       return hypeCommand.handleHypeCommand(interaction, {
         searchGame: steamLib.searchGame,
-        fetchReviews: checkWishlistPrices.fetchReviews,
+        fetchReviews: steamLib.fetchReviewTexts,
         fetchChatReply: chat.fetchChatReply
       });
     },
@@ -335,7 +335,7 @@ client.on(Events.InteractionCreate, function (interaction) {
         searchGame: steamLib.searchGame,
         fetchGameContext: steamLib.fetchGameContext,
         fetchPriceDetail: steamLib.fetchPriceDetail,
-        fetchReviews: checkWishlistPrices.fetchReviews,
+        fetchReviews: steamLib.fetchReviewTexts,
         fetchChatReply: chat.fetchChatReply
       });
     }
