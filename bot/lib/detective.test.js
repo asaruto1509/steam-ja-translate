@@ -34,6 +34,14 @@ test('isDirectGuess matches when the game name appears inside a longer guess', (
   assert.equal(isDirectGuess('それってHollow Knightじゃない?', 'Hollow Knight'), true);
 });
 
+test('isDirectGuess does not false-positive when a short game name is embedded in an unrelated English word', () => {
+  assert.equal(isDirectGuess('このゲームはrustlike系ですか？', 'Rust'), false);
+});
+
+test('isDirectGuess still matches a short game name asked about directly', () => {
+  assert.equal(isDirectGuess('それってRustですか？', 'Rust'), true);
+});
+
 test('isDirectGuess returns false for unrelated text', () => {
   assert.equal(isDirectGuess('主人公は人間ですか？', 'Hollow Knight'), false);
 });

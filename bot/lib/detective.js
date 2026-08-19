@@ -17,14 +17,24 @@ function parseDetectiveAnswer(text) {
 }
 
 function normalize(text) {
-  return (text || '').toLowerCase().replace(/[\s　]+/g, '');
+  return (text || '').toLowerCase().trim().replace(/[\s　]+/g, ' ');
 }
 
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// 単純な部分一致だと、"Rust"のような短い英単語名のゲームで
+// 「rustlike系ですか？」のような無関係な質問にも誤反応してしまう。
+// ASCII英数字が前後に連続していないことを確認する(日本語文字は隣接していても許容する。
+// 「それってHollow Knightじゃない?」のように日本語と英単語の間にスペースが無いのが普通なため)。
 function isDirectGuess(text, gameName) {
   var normalizedGuess = normalize(text);
   var normalizedName = normalize(gameName);
   if (!normalizedGuess || !normalizedName) return false;
-  return normalizedGuess.indexOf(normalizedName) !== -1;
+  if (normalizedGuess === normalizedName) return true;
+  var re = new RegExp('(?<![a-z0-9])' + escapeRegExp(normalizedName) + '(?![a-z0-9])');
+  return re.test(normalizedGuess);
 }
 
 function buildRevealEmbed(gameName, appid) {
