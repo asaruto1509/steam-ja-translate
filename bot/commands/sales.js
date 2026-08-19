@@ -1,5 +1,6 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
+var priceFormat = require('../lib/priceFormat.js');
 
 function pickTopSales(pool, count) {
   return pool.slice().sort(function (a, b) { return b.discountPercent - a.discountPercent; }).slice(0, count);
@@ -9,10 +10,6 @@ function buildSalesPrompt(games) {
   var lines = games.map(function (g) { return '・' + g.name + ' (-' + g.discountPercent + '%, ¥' + g.finalPrice + ')'; }).join('\n');
   return 'あなたはSteamセール情報の紹介AIです。以下は今週の値下げ中タイトルです。\n' + lines + '\n\n'
     + 'この中から今買う価値が高い理由を、気さくなタメ口寄りの日本語で2〜3文にまとめてください。前置きは不要です。';
-}
-
-function priceLine(g) {
-  return '~~¥' + g.originalPrice.toLocaleString() + '~~ → **¥' + g.finalPrice.toLocaleString() + '** (-' + g.discountPercent + '%)';
 }
 
 function formatSalesReply(games, aiBlurb) {
@@ -25,7 +22,7 @@ function formatSalesReply(games, aiBlurb) {
       color: 0x66c0f4,
       description: aiBlurb || '',
       fields: games.map(function (g) {
-        return { name: g.name, value: priceLine(g), inline: true };
+        return { name: g.name, value: priceFormat.formatPriceLine(g), inline: true };
       }),
       image: { url: steamLib.headerImageUrl(games[0].id) }
     }]

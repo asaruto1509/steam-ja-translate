@@ -1,6 +1,7 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
 var promptContext = require('../lib/promptContext.js');
+var priceFormat = require('../lib/priceFormat.js');
 
 function filterCheapPool(pool, maxPrice) {
   return pool.filter(function (g) { return g.finalPrice <= maxPrice; });
@@ -23,11 +24,6 @@ function formatGachaReply(game, positivePct, flavorText) {
     return { content: 'ガチャ対象のゲームが見つからなかった…' };
   }
   var rarity = rarityForPositivePct(positivePct);
-  var priceLine = game.finalPrice === 0
-    ? '無料'
-    : game.discountPercent > 0
-      ? '~~¥' + game.originalPrice.toLocaleString() + '~~ → **¥' + game.finalPrice.toLocaleString() + '**'
-      : '¥' + game.finalPrice.toLocaleString();
   return {
     embeds: [{
       title: rarity.emoji + ' [' + rarity.grade + '] ' + game.name,
@@ -35,7 +31,7 @@ function formatGachaReply(game, positivePct, flavorText) {
       color: 0x66c0f4,
       description: flavorText || 'うまく紹介文を生成できなかった…',
       image: { url: steamLib.headerImageUrl(game.id) },
-      fields: [{ name: '価格', value: priceLine, inline: true }]
+      fields: [{ name: '価格', value: priceFormat.formatPriceLine(game), inline: true }]
     }]
   };
 }
