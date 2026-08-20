@@ -1,0 +1,16 @@
+[Unit]
+Description=Steam Web Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=opc
+Group=opc
+WorkingDirectory=/home/opc/steam-ja-translate/web
+EnvironmentFile=/home/opc/steam-ja-translate/web/.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
