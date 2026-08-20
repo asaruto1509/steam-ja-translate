@@ -1,0 +1,14 @@
+{
+  "name": "steam-web-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Steamゲーム分析Webダッシュボード(個人用)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.19.0"
+  }
+}
