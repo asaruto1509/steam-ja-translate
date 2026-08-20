@@ -29,12 +29,13 @@ app.get('/', function (req, res) {
 });
 
 app.get('/analyze', async function (req, res) {
-  var name = (req.query.name || '').trim();
-  if (!name) {
-    res.send(layout.renderLayout('<p class="error">ゲーム名を入力してください。</p>', {}));
-    return;
-  }
   try {
+    var rawName = req.query.name;
+    var name = (typeof rawName === 'string' ? rawName : '').trim();
+    if (!name) {
+      res.send(layout.renderLayout('<p class="error">ゲーム名を入力してください。</p>', { query: name }));
+      return;
+    }
     var deps = {
       searchGame: steamLib.searchGame,
       fetchPriceDetail: steamLib.fetchPriceDetail,
@@ -51,7 +52,7 @@ app.get('/analyze', async function (req, res) {
     var body = analysisPage.renderAnalysisPage(vm);
     res.send(layout.renderLayout(body, { query: name }));
   } catch (e) {
-    console.error('/analyze failed: ' + e.message);
+    console.error('/analyze failed:', e);
     res.status(500).send(layout.renderLayout('<p class="error">エラーが発生しました。</p>', { query: name }));
   }
 });
