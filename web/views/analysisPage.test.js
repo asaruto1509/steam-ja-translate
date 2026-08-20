@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { renderAnalysisPage } = require('./analysisPage.js');
+const steamLib = require('../../bot/lib/steam.js');
 
 test('renderAnalysisPage shows a not-found message', () => {
   const html = renderAnalysisPage({ notFound: true });
@@ -52,6 +53,21 @@ test('renderAnalysisPage renders verdict, category stars, pros, and cons', () =>
   assert.match(html, /操作感が良い/);
   assert.match(html, /ボリューム不足/);
   assert.match(html, /アクション好き/);
+});
+
+test('renderAnalysisPage links the game name to the store page and shows the header image', () => {
+  const html = renderAnalysisPage({
+    notFound: false,
+    name: 'Hollow Knight',
+    appid: '367520',
+    priceHtml: '¥1,500',
+    reviewSummaryText: '96% (10,000件)',
+    genres: [],
+    categories: [],
+    analysis: null
+  });
+  assert.match(html, new RegExp('href="' + steamLib.storeUrl('367520').replace(/\//g, '\\/') + '"'));
+  assert.match(html, new RegExp('src="' + steamLib.headerImageUrl('367520').replace(/\//g, '\\/') + '"'));
 });
 
 test('renderAnalysisPage escapes the game name', () => {

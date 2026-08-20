@@ -1,14 +1,19 @@
 'use strict';
 var html = require('../lib/html.js');
+var steamLib = require('../../bot/lib/steam.js');
 
 function renderAnalysisPage(vm) {
   if (vm.notFound) {
     return '<p class="not-found">見つからなかった…</p>';
   }
 
+  var storeUrl = html.escapeHtml(steamLib.storeUrl(vm.appid));
+  var headerImageUrl = html.escapeHtml(steamLib.headerImageUrl(vm.appid));
+
   var parts = [];
   parts.push('<article class="game-card">');
-  parts.push('<h2>' + html.escapeHtml(vm.name) + '</h2>');
+  parts.push('<img class="header-image" src="' + headerImageUrl + '" alt="">');
+  parts.push('<h2><a href="' + storeUrl + '">' + html.escapeHtml(vm.name) + '</a></h2>');
   parts.push('<p class="price">💴 ' + vm.priceHtml + '</p>');
   parts.push('<p class="reviews">💬 ' + html.escapeHtml(vm.reviewSummaryText) + '</p>');
 

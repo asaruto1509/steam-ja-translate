@@ -87,3 +87,41 @@ test('buildAnalysisViewModel converts analysis categories into star strings', ()
   assert.deepEqual(vm.analysis.pros, ['操作感が良い']);
   assert.deepEqual(vm.analysis.audienceAgainst, []);
 });
+
+test('buildAnalysisViewModel treats a non-array pros as empty instead of throwing', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Malformed Game' },
+    priceDetail: null,
+    reviewSummary: null,
+    gameContext: null,
+    analysis: {
+      verdict: '買い',
+      reason: '',
+      categories: [],
+      pros: '操作感が良い',
+      cons: [],
+      audienceFor: [],
+      audienceAgainst: []
+    }
+  });
+  assert.deepEqual(vm.analysis.pros, []);
+});
+
+test('buildAnalysisViewModel treats a non-array categories as empty categoryLines instead of throwing', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Malformed Game' },
+    priceDetail: null,
+    reviewSummary: null,
+    gameContext: null,
+    analysis: {
+      verdict: '買い',
+      reason: '',
+      categories: 'ゲームプレイ',
+      pros: [],
+      cons: [],
+      audienceFor: [],
+      audienceAgainst: []
+    }
+  });
+  assert.deepEqual(vm.analysis.categoryLines, []);
+});

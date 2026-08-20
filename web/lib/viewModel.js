@@ -38,13 +38,13 @@ function buildAnalysisViewModel(result) {
     vm.analysis = {
       verdict: a.verdict || '判定不明',
       reason: a.reason || '',
-      categoryLines: (a.categories || [])
+      categoryLines: (Array.isArray(a.categories) ? a.categories : [])
         .filter(function (c) { return c && typeof c.stars === 'number'; })
         .map(function (c) { return { name: c.name, stars: starsLine(c.stars) }; }),
-      pros: a.pros || [],
-      cons: a.cons || [],
-      audienceFor: a.audienceFor || [],
-      audienceAgainst: a.audienceAgainst || []
+      pros: Array.isArray(a.pros) ? a.pros : [],
+      cons: Array.isArray(a.cons) ? a.cons : [],
+      audienceFor: Array.isArray(a.audienceFor) ? a.audienceFor : [],
+      audienceAgainst: Array.isArray(a.audienceAgainst) ? a.audienceAgainst : []
     };
   }
 
