@@ -20,3 +20,26 @@ test('renderLayout escapes the query value in the search box', () => {
   assert.doesNotMatch(page, /value="<script>"/);
   assert.match(page, /value="&lt;script&gt;"/);
 });
+
+test('renderLayout includes a loading overlay explaining the wait time', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /loading-overlay/);
+  assert.match(page, /分析中/);
+  assert.match(page, /45秒/);
+});
+
+test('renderLayout includes a script that shows the loading overlay on form submit', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /addEventListener\("submit"/);
+  assert.match(page, /classList\.add\("loading"\)/);
+});
+
+test('renderLayout keeps the header image responsive on narrow screens', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.header-image\{[^}]*max-width:100%/);
+});
+
+test('renderLayout gives search form controls a larger tap target', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /min-height:44px/);
+});
