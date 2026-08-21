@@ -30,6 +30,7 @@ test('renderLayout includes a loading overlay explaining the wait time', () => {
 
 test('renderLayout includes a script that shows the loading overlay on form submit', () => {
   const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /querySelectorAll\("form"\)/);
   assert.match(page, /addEventListener\("submit"/);
   assert.match(page, /classList\.add\("loading"\)/);
 });
@@ -42,4 +43,9 @@ test('renderLayout keeps the header image responsive on narrow screens', () => {
 test('renderLayout gives search form controls a larger tap target', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /min-height:44px/);
+});
+
+test('renderLayout gives the favorite-form button a larger tap target', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.favorite-form button\{[^}]*min-height:44px/);
 });

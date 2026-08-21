@@ -34,6 +34,9 @@ function loadData() {
       favorites: Array.isArray(parsed.favorites) ? parsed.favorites : []
     };
   } catch (e) {
+    if (e.code !== 'ENOENT') {
+      console.error('web dashboard store: failed to load data:', e);
+    }
     return { history: [], favorites: [] };
   }
 }

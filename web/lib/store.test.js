@@ -1,7 +1,12 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { applyHistoryEntry, applyFavoriteAdd, applyFavoriteRemove, isFavorited } = require('./store.js');
+const fs = require('fs');
+const path = require('path');
+const { applyHistoryEntry, applyFavoriteAdd, applyFavoriteRemove, isFavorited, getHistory, getFavorites } = require('./store.js');
+
+const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_FILE = path.join(DATA_DIR, 'dashboard-data.json');
 
 test('applyHistoryEntry adds a new entry to the front', () => {
   const result = applyHistoryEntry([], { appid: '1', name: 'Game A' }, 30);
@@ -53,4 +58,25 @@ test('isFavorited returns false when the appid is not in the list', () => {
 
 test('isFavorited returns false for an empty list', () => {
   assert.equal(isFavorited([], '1'), false);
+});
+
+test('getHistory/getFavorites fall back to empty arrays without throwing when the data file is corrupt', () => {
+  const hadExisting = fs.existsSync(DATA_FILE);
+  const previousContent = hadExisting ? fs.readFileSync(DATA_FILE, 'utf8') : null;
+
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(DATA_FILE, '{ not valid json ][');
+
+    assert.doesNotThrow(() => {
+      assert.deepEqual(getHistory(), []);
+      assert.deepEqual(getFavorites(), []);
+    });
+  } finally {
+    if (hadExisting) {
+      fs.writeFileSync(DATA_FILE, previousContent);
+    } else if (fs.existsSync(DATA_FILE)) {
+      fs.unlinkSync(DATA_FILE);
+    }
+  }
 });
