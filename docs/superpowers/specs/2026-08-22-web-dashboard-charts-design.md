@@ -18,7 +18,9 @@ Webダッシュボードの改善4項目(UX改善→分析精度強化→複数�
   - `GET https://api.isthereanydeal.com/games/lookup/v1?appid=<steam_appid>&key=<key>` でSteam appidからITADのゲームID(UUID)を取得。
   - `GET https://api.isthereanydeal.com/games/history/v2?id=<itad_game_id>&country=jp&shops=61&key=<key>` で価格推移(タイムスタンプ・価格・割引率)を取得。`shops=61`はSteamのショップID。`country=jp`で円建てに揃える。
   - APIキーは`ITAD_API_KEY`環境変数(`.env`/`/etc/web-dashboard.env`)として新規追加。未設定または呼び出し失敗時はグラフを省略し、他の分析結果には影響させない(既存の`safe()`パターンを踏襲)。
-  - 応答の正確なJSONスキーマは実装時に実際のAPI呼び出しで確認・確定させる(本specの記述はドキュメント調査に基づく設計時点の理解であり、フィールド名の細部は実装時に実APIで検証する)。
+  - 応答形状は実際にAPIを叩いて検証済み(2026-08-22実施、Hollow Knight appid 367520で確認)。
+    - `games/lookup/v1`の応答: `{"found":true,"game":{"id":"<uuid>","slug":"...","title":"...","type":"game","mature":false,"assets":{...}}}`。`game.id`を使う。
+    - `games/history/v2`の応答: 配列。各要素は`{"timestamp":"2026-07-09T19:28:10+02:00","shop":{"id":61,"name":"Steam"},"deal":{"price":{"amount":1700,"amountInt":1700,"currency":"JPY"},"regular":{"amount":1700,"amountInt":1700,"currency":"JPY"},"cut":0}}`。`country=jp`指定時は`amount`がそのまま円の整数値(JPYは小数点以下がないため`amount`と`amountInt`は同値)。新しい順(降順)で返る。デフォルトでは直近3ヶ月分のみ。
 - **類似ゲーム比較の実現方法**: 追加のAI呼び出しはしない。既存の1回の分析AI呼び出し(`web/lib/analysisPrompt.js`)のJSON応答スキーマに、類似ゲーム名を5件求める項目を追加する。得られた名前ごとに既存の`bot/lib/steam.js`の`searchGame`/`fetchPriceDetail`/`fetchReviewSummary`/`fetchPlayerCount`を並列で呼び出し、価格・レビュー評価・現在のプレイヤー数を取得して比較表にする。
 - **`bot/**`は一切変更しない**(既存の標準制約)。`web/lib/analysisPrompt.js`はWeb専用モジュールなので、スキーマ拡張はここで行う。
 - **時間について**: ユーザーは「時間はかかってもいい」と明言している。類似ゲーム5件分のSteam API呼び出しが直列/並列問わず追加でかかることを許容する。
