@@ -107,6 +107,44 @@ test('buildAnalysisViewModel treats a non-array pros as empty instead of throwin
   assert.deepEqual(vm.analysis.pros, []);
 });
 
+test('buildAnalysisViewModel formats the current player count', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Popular Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null, analysis: null,
+    playerCount: 12345
+  });
+  assert.equal(vm.playerCountText, '12,345人');
+});
+
+test('buildAnalysisViewModel leaves playerCountText null when player count is unavailable', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null, analysis: null,
+    playerCount: null
+  });
+  assert.equal(vm.playerCountText, null);
+});
+
+test('buildAnalysisViewModel formats achievement stats', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null, analysis: null,
+    achievementStats: { count: 50, avgUnlockPct: 23.456, rarest: { name: 'Secret Ending', percent: 0.5 } }
+  });
+  assert.deepEqual(vm.achievementInfo, {
+    count: 50, avgUnlockPct: '23.5', rarestName: 'Secret Ending', rarestPercent: 0.5
+  });
+});
+
+test('buildAnalysisViewModel leaves achievementInfo null when achievement stats are unavailable', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null, analysis: null,
+    achievementStats: null
+  });
+  assert.equal(vm.achievementInfo, null);
+});
+
 test('buildAnalysisViewModel treats a non-array categories as empty categoryLines instead of throwing', () => {
   const vm = buildAnalysisViewModel({
     found: { id: '1', name: 'Malformed Game' },

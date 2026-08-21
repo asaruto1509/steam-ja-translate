@@ -15,6 +15,20 @@ function formatPriceHtml(detail) {
   return '¥' + detail.finalPrice.toLocaleString();
 }
 
+function formatPlayerCount(playerCount) {
+  return typeof playerCount === 'number' ? playerCount.toLocaleString() + '人' : null;
+}
+
+function formatAchievementStats(stats) {
+  if (!stats || typeof stats.count !== 'number') return null;
+  return {
+    count: stats.count,
+    avgUnlockPct: typeof stats.avgUnlockPct === 'number' ? stats.avgUnlockPct.toFixed(1) : null,
+    rarestName: stats.rarest ? stats.rarest.name : null,
+    rarestPercent: stats.rarest && typeof stats.rarest.percent === 'number' ? stats.rarest.percent : null
+  };
+}
+
 function buildAnalysisViewModel(result) {
   if (!result.found) {
     return { notFound: true };
@@ -30,6 +44,8 @@ function buildAnalysisViewModel(result) {
       : 'レビュー情報なし',
     genres: (result.gameContext && result.gameContext.genres) || [],
     categories: (result.gameContext && result.gameContext.categories) || [],
+    playerCountText: formatPlayerCount(result.playerCount),
+    achievementInfo: formatAchievementStats(result.achievementStats),
     analysis: null
   };
 

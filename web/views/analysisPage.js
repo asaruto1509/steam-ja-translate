@@ -22,6 +22,19 @@ function renderAnalysisPage(vm) {
     parts.push('<p class="tags">🏷️ ' + html.escapeHtml(tags.join(', ')) + '</p>');
   }
 
+  if (vm.playerCountText) {
+    parts.push('<p class="player-count">👥 現在 ' + html.escapeHtml(vm.playerCountText) + ' プレイ中</p>');
+  }
+
+  if (vm.achievementInfo) {
+    var ai = vm.achievementInfo;
+    var achievementLine = '🏆 実績' + ai.count + '個・平均達成率' + html.escapeHtml(ai.avgUnlockPct) + '%';
+    if (ai.rarestName) {
+      achievementLine += '(最レア: ' + html.escapeHtml(ai.rarestName) + ' ' + html.escapeHtml(ai.rarestPercent) + '%)';
+    }
+    parts.push('<p class="achievements">' + achievementLine + '</p>');
+  }
+
   if (vm.analysis) {
     var a = vm.analysis;
     parts.push('<section class="analysis">');

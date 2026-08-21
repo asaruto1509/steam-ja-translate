@@ -8,6 +8,7 @@ var gameAnalysis = require('./lib/gameAnalysis.js');
 var steamLib = require('../bot/lib/steam.js');
 var chatLib = require('../bot/chat.js');
 var reviewLib = require('../bot/commands/review.js');
+var analysisPrompt = require('./lib/analysisPrompt.js');
 
 var PORT = process.env.PORT || 3000;
 var HOST = process.env.BIND_HOST || '127.0.0.1';
@@ -41,9 +42,11 @@ app.get('/analyze', async function (req, res) {
       fetchPriceDetail: steamLib.fetchPriceDetail,
       fetchReviewSummary: steamLib.fetchReviewSummary,
       fetchGameContext: steamLib.fetchGameContext,
-      fetchReviewTexts: steamLib.fetchReviewTexts,
+      fetchPlayerCount: steamLib.fetchPlayerCount,
+      fetchAchievementStats: steamLib.fetchAchievementStats,
+      fetchOpposingReviews: steamLib.fetchOpposingReviews,
       fetchChatReply: chatLib.fetchChatReply,
-      buildAnalysisPrompt: reviewLib.buildAnalysisPrompt,
+      buildAnalysisPrompt: analysisPrompt.buildAnalysisPrompt,
       parseAnalysis: reviewLib.parseAnalysis,
       apiKey: process.env.ONEMIN_API_KEY
     };

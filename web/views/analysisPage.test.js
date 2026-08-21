@@ -70,6 +70,56 @@ test('renderAnalysisPage links the game name to the store page and shows the hea
   assert.match(html, new RegExp('src="' + steamLib.headerImageUrl('367520').replace(/\//g, '\\/') + '"'));
 });
 
+test('renderAnalysisPage shows the current player count when present', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: '12,345人', achievementInfo: null
+  });
+  assert.match(html, /12,345人/);
+});
+
+test('renderAnalysisPage omits the player count section when unavailable', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null
+  });
+  assert.doesNotMatch(html, /class="player-count"/);
+});
+
+test('renderAnalysisPage shows achievement stats including the rarest achievement', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null,
+    achievementInfo: { count: 50, avgUnlockPct: '23.5', rarestName: 'Secret Ending', rarestPercent: 0.5 }
+  });
+  assert.match(html, /50/);
+  assert.match(html, /23\.5/);
+  assert.match(html, /Secret Ending/);
+  assert.match(html, /0\.5/);
+});
+
+test('renderAnalysisPage omits the achievement section when unavailable', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null
+  });
+  assert.doesNotMatch(html, /class="achievements"/);
+});
+
+test('renderAnalysisPage escapes the rarest achievement name', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null,
+    achievementInfo: { count: 1, avgUnlockPct: '1.0', rarestName: '<script>alert(1)</script>', rarestPercent: 1 }
+  });
+  assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
+});
+
 test('renderAnalysisPage escapes the game name', () => {
   const html = renderAnalysisPage({
     notFound: false, name: '<script>alert(1)</script>', appid: '1', priceHtml: '¥100',
