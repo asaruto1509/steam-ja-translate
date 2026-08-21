@@ -14,6 +14,17 @@ function renderAnalysisPage(vm) {
   parts.push('<article class="game-card">');
   parts.push('<img class="header-image" src="' + headerImageUrl + '" alt="">');
   parts.push('<h2><a href="' + storeUrl + '">' + html.escapeHtml(vm.name) + '</a></h2>');
+  if (vm.isFavorite) {
+    parts.push('<form method="POST" action="/favorites/remove" class="favorite-form">'
+      + '<input type="hidden" name="appid" value="' + html.escapeHtml(vm.appid) + '">'
+      + '<input type="hidden" name="name" value="' + html.escapeHtml(vm.name) + '">'
+      + '<button type="submit">★ お気に入り解除</button></form>');
+  } else {
+    parts.push('<form method="POST" action="/favorites/add" class="favorite-form">'
+      + '<input type="hidden" name="appid" value="' + html.escapeHtml(vm.appid) + '">'
+      + '<input type="hidden" name="name" value="' + html.escapeHtml(vm.name) + '">'
+      + '<button type="submit">☆ お気に入りに追加</button></form>');
+  }
   parts.push('<p class="price">💴 ' + vm.priceHtml + '</p>');
   parts.push('<p class="reviews">💬 ' + html.escapeHtml(vm.reviewSummaryText) + '</p>');
 
