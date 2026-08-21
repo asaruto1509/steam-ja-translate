@@ -120,6 +120,45 @@ test('renderAnalysisPage escapes the rarest achievement name', () => {
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
 });
 
+test('renderAnalysisPage shows an add-to-favorites button when not favorited', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: false
+  });
+  assert.match(result, /action="\/favorites\/add"/);
+  assert.doesNotMatch(result, /action="\/favorites\/remove"/);
+});
+
+test('renderAnalysisPage shows a remove-from-favorites button when favorited', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: true
+  });
+  assert.match(result, /action="\/favorites\/remove"/);
+  assert.doesNotMatch(result, /action="\/favorites\/add"/);
+});
+
+test('renderAnalysisPage includes the appid and name in the favorite form', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Hollow Knight', appid: '367520', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: false
+  });
+  assert.match(result, /name="appid" value="367520"/);
+  assert.match(result, /name="name" value="Hollow Knight"/);
+});
+
+test('renderAnalysisPage escapes the name in the favorite form', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: '<script>alert(1)</script>', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: false
+  });
+  assert.doesNotMatch(result, /<script>alert\(1\)<\/script>/);
+});
+
 test('renderAnalysisPage escapes the game name', () => {
   const html = renderAnalysisPage({
     notFound: false, name: '<script>alert(1)</script>', appid: '1', priceHtml: '¥100',

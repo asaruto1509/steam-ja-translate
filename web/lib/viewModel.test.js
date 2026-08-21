@@ -163,3 +163,20 @@ test('buildAnalysisViewModel treats a non-array categories as empty categoryLine
   });
   assert.deepEqual(vm.analysis.categoryLines, []);
 });
+
+test('buildAnalysisViewModel passes through isFavorite as true', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null, analysis: null,
+    isFavorite: true
+  });
+  assert.equal(vm.isFavorite, true);
+});
+
+test('buildAnalysisViewModel defaults isFavorite to false when not provided', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null, analysis: null
+  });
+  assert.equal(vm.isFavorite, false);
+});

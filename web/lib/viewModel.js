@@ -46,6 +46,7 @@ function buildAnalysisViewModel(result) {
     categories: (result.gameContext && result.gameContext.categories) || [],
     playerCountText: formatPlayerCount(result.playerCount),
     achievementInfo: formatAchievementStats(result.achievementStats),
+    isFavorite: result.isFavorite === true,
     analysis: null
   };
 
