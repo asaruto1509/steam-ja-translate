@@ -55,6 +55,29 @@ test('renderAnalysisPage renders verdict, category stars, pros, and cons', () =>
   assert.match(html, /アクション好き/);
 });
 
+test('renderAnalysisPage shows the player count and sentiment history charts when present', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountHistoryPoints: [{ date: '2026-08-01T00:00:00+00:00', count: 50 }],
+    sentimentHistoryPoints: [{ date: '2026-08-01T00:00:00+00:00', positivePct: 90 }]
+  });
+  assert.match(html, /プレイヤー数推移/);
+  assert.match(html, /評判の推移/);
+  assert.match(html, /class="player-count-chart"/);
+  assert.match(html, /class="sentiment-chart"/);
+});
+
+test('renderAnalysisPage omits the player count and sentiment history sections when empty', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountHistoryPoints: [], sentimentHistoryPoints: []
+  });
+  assert.doesNotMatch(html, /プレイヤー数推移/);
+  assert.doesNotMatch(html, /評判の推移/);
+});
+
 test('renderAnalysisPage renders external critic scores when present', () => {
   const html = renderAnalysisPage({
     notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',

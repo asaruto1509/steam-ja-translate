@@ -6,6 +6,7 @@ var analysisPage = require('./views/analysisPage.js');
 var viewModel = require('./lib/viewModel.js');
 var gameAnalysis = require('./lib/gameAnalysis.js');
 var priceHistoryApi = require('./lib/priceHistoryApi.js');
+var localHistoryApi = require('./lib/localHistoryApi.js');
 var steamLib = require('../bot/lib/steam.js');
 var chatLib = require('../bot/chat.js');
 var reviewLib = require('../bot/commands/review.js');
@@ -52,6 +53,8 @@ app.get('/analyze', async function (req, res) {
       fetchOpposingReviews: steamLib.fetchOpposingReviews,
       fetchChatReply: chatLib.fetchChatReply,
       fetchPriceHistory: priceHistoryApi.fetchPriceHistory,
+      fetchPlayerCountHistory: localHistoryApi.fetchPlayerCountHistory,
+      fetchSentimentHistory: localHistoryApi.fetchSentimentHistory,
       itadApiKey: process.env.ITAD_API_KEY,
       buildAnalysisPrompt: analysisPrompt.buildAnalysisPrompt,
       parseAnalysis: reviewLib.parseAnalysis,

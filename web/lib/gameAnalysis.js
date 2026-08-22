@@ -60,7 +60,9 @@ async function fetchGameAnalysis(name, deps) {
     safe(function () { return deps.fetchPlayerCount(found.id); }, null),
     safe(function () { return deps.fetchAchievementStats(found.id); }, null),
     deps.apiKey ? safe(function () { return deps.fetchOpposingReviews(found.id, 10); }, NO_REVIEWS) : Promise.resolve(NO_REVIEWS),
-    deps.itadApiKey ? safe(function () { return deps.fetchPriceHistory(found.id, deps.itadApiKey); }, []) : Promise.resolve([])
+    deps.itadApiKey ? safe(function () { return deps.fetchPriceHistory(found.id, deps.itadApiKey); }, []) : Promise.resolve([]),
+    safe(function () { return deps.fetchPlayerCountHistory(found.id); }, []),
+    safe(function () { return deps.fetchSentimentHistory(found.id); }, [])
   ]);
   var priceDetail = results[0];
   var reviewSummary = results[1];
@@ -69,6 +71,8 @@ async function fetchGameAnalysis(name, deps) {
   var achievementStats = results[4];
   var reviews = results[5];
   var priceHistory = results[6];
+  var playerCountHistory = results[7];
+  var sentimentHistory = results[8];
 
   var analysis = await fetchAnalysis(deps, found, gameContext, reviews, { playerCount: playerCount, achievementStats: achievementStats });
   var similarGamesData = analysis ? await fetchSimilarGamesData(analysis.similarGames, deps, found.id) : [];
@@ -76,6 +80,7 @@ async function fetchGameAnalysis(name, deps) {
   return {
     found: found, priceDetail: priceDetail, reviewSummary: reviewSummary, gameContext: gameContext,
     playerCount: playerCount, achievementStats: achievementStats, priceHistory: priceHistory,
+    playerCountHistory: playerCountHistory, sentimentHistory: sentimentHistory,
     similarGamesData: similarGamesData, analysis: analysis
   };
 }

@@ -58,6 +58,14 @@ function renderAnalysisPage(vm) {
     parts.push('<section class="price-history"><h3>価格推移</h3>' + charts.renderPriceLineChart(vm.priceHistoryPoints) + '</section>');
   }
 
+  if (vm.playerCountHistoryPoints && vm.playerCountHistoryPoints.length) {
+    parts.push('<section class="player-count-history"><h3>プレイヤー数推移</h3>' + charts.renderPlayerCountChart(vm.playerCountHistoryPoints) + '</section>');
+  }
+
+  if (vm.sentimentHistoryPoints && vm.sentimentHistoryPoints.length) {
+    parts.push('<section class="sentiment-history"><h3>評判の推移</h3>' + charts.renderSentimentChart(vm.sentimentHistoryPoints) + '</section>');
+  }
+
   if (vm.analysis) {
     var a = vm.analysis;
     parts.push('<section class="analysis">');

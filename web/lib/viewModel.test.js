@@ -216,6 +216,26 @@ test('buildAnalysisViewModel defaults priceHistoryPoints to an empty array when 
   assert.deepEqual(vm.priceHistoryPoints, []);
 });
 
+test('buildAnalysisViewModel passes through player count and sentiment history points', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null, analysis: null,
+    playerCountHistory: [{ date: '2026-08-01T00:00:00+00:00', count: 50 }],
+    sentimentHistory: [{ date: '2026-08-01T00:00:00+00:00', positivePct: 90 }]
+  });
+  assert.deepEqual(vm.playerCountHistoryPoints, [{ date: '2026-08-01T00:00:00+00:00', count: 50 }]);
+  assert.deepEqual(vm.sentimentHistoryPoints, [{ date: '2026-08-01T00:00:00+00:00', positivePct: 90 }]);
+});
+
+test('buildAnalysisViewModel defaults player count and sentiment history points to empty arrays when missing', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null, analysis: null
+  });
+  assert.deepEqual(vm.playerCountHistoryPoints, []);
+  assert.deepEqual(vm.sentimentHistoryPoints, []);
+});
+
 test('buildAnalysisViewModel exposes the raw review positive percentage', () => {
   const vm = buildAnalysisViewModel({
     found: { id: '1', name: 'Game' },

@@ -76,6 +76,8 @@ function buildAnalysisViewModel(result) {
     playerCountText: formatPlayerCount(result.playerCount),
     achievementInfo: formatAchievementStats(result.achievementStats),
     priceHistoryPoints: Array.isArray(result.priceHistory) ? result.priceHistory : [],
+    playerCountHistoryPoints: Array.isArray(result.playerCountHistory) ? result.playerCountHistory : [],
+    sentimentHistoryPoints: Array.isArray(result.sentimentHistory) ? result.sentimentHistory : [],
     reviewPositivePct: result.reviewSummary ? result.reviewSummary.positivePct : null,
     similarGames: formatSimilarGames(result.similarGamesData),
     isFavorite: result.isFavorite === true,

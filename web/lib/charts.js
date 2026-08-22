@@ -39,38 +39,50 @@ function renderReviewPieChart(positivePct) {
     + '</svg>';
 }
 
-function renderPriceLineChart(pricePoints) {
-  if (!Array.isArray(pricePoints) || !pricePoints.length) return '';
-  var points = pricePoints.slice().sort(function (a, b) {
+function renderLineChart(points, valueKey, cssClass, color) {
+  if (!Array.isArray(points) || !points.length) return '';
+  var sorted = points.slice().sort(function (a, b) {
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   });
   var width = 280;
   var height = 100;
   var padding = 20;
-  var prices = points.map(function (p) { return p.price; });
-  var minPrice = Math.min.apply(null, prices);
-  var maxPrice = Math.max.apply(null, prices);
-  var range = maxPrice - minPrice || 1;
+  var values = sorted.map(function (p) { return p[valueKey]; });
+  var minValue = Math.min.apply(null, values);
+  var maxValue = Math.max.apply(null, values);
+  var range = maxValue - minValue || 1;
 
   function xAt(i) {
-    return points.length === 1 ? width / 2 : padding + (i / (points.length - 1)) * (width - padding * 2);
+    return sorted.length === 1 ? width / 2 : padding + (i / (sorted.length - 1)) * (width - padding * 2);
   }
-  function yAt(price) {
-    return height - padding - ((price - minPrice) / range) * (height - padding * 2);
+  function yAt(value) {
+    return height - padding - ((value - minValue) / range) * (height - padding * 2);
   }
 
-  var circles = points.map(function (p, i) {
-    return '<circle cx="' + xAt(i) + '" cy="' + yAt(p.price) + '" r="3" fill="#66c0f4"></circle>';
+  var circles = sorted.map(function (p, i) {
+    return '<circle cx="' + xAt(i) + '" cy="' + yAt(p[valueKey]) + '" r="3" fill="' + color + '"></circle>';
   }).join('');
 
   var polyline = '';
-  if (points.length > 1) {
-    var coords = points.map(function (p, i) { return xAt(i) + ',' + yAt(p.price); }).join(' ');
-    polyline = '<polyline points="' + coords + '" fill="none" stroke="#66c0f4" stroke-width="2"></polyline>';
+  if (sorted.length > 1) {
+    var coords = sorted.map(function (p, i) { return xAt(i) + ',' + yAt(p[valueKey]); }).join(' ');
+    polyline = '<polyline points="' + coords + '" fill="none" stroke="' + color + '" stroke-width="2"></polyline>';
   }
 
-  return '<svg class="price-line-chart" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
+  return '<svg class="' + cssClass + '" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
     + polyline + circles + '</svg>';
+}
+
+function renderPriceLineChart(pricePoints) {
+  return renderLineChart(pricePoints, 'price', 'price-line-chart', '#66c0f4');
+}
+
+function renderPlayerCountChart(playerCountPoints) {
+  return renderLineChart(playerCountPoints, 'count', 'player-count-chart', '#7fbb4a');
+}
+
+function renderSentimentChart(sentimentPoints) {
+  return renderLineChart(sentimentPoints, 'positivePct', 'sentiment-chart', '#e0a952');
 }
 
 function renderAchievementDistributionChart(buckets) {
@@ -97,5 +109,7 @@ module.exports = {
   renderCategoryBarChart: renderCategoryBarChart,
   renderReviewPieChart: renderReviewPieChart,
   renderPriceLineChart: renderPriceLineChart,
+  renderPlayerCountChart: renderPlayerCountChart,
+  renderSentimentChart: renderSentimentChart,
   renderAchievementDistributionChart: renderAchievementDistributionChart
 };

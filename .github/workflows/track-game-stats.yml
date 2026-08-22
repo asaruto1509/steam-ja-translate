@@ -1,0 +1,36 @@
+name: Track Game Stats
+
+on:
+  schedule:
+    # 03:00 UTC = 12:00 JST。GitHub Actionsのcronは分刻みの遅延があるため目安時刻。
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  track-stats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run stats tracker
+        env:
+          STEAM_ID64: ${{ secrets.STEAM_ID64 }}
+        run: node scripts/track-game-stats.js
+
+      - name: Commit updated stats history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add player_count_history.json sentiment_history.json
+          git diff --staged --quiet || git commit -m "chore: update player count/sentiment history [skip ci]"
+          git push

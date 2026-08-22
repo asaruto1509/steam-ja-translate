@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { renderCategoryBarChart, renderReviewPieChart, renderPriceLineChart, renderAchievementDistributionChart } = require('./charts.js');
+const { renderCategoryBarChart, renderReviewPieChart, renderPriceLineChart, renderAchievementDistributionChart, renderPlayerCountChart, renderSentimentChart } = require('./charts.js');
 
 test('renderCategoryBarChart returns an empty string for an empty list', () => {
   assert.equal(renderCategoryBarChart([]), '');
@@ -92,6 +92,35 @@ test('renderAchievementDistributionChart scales bars relative to the largest buc
   const barWidths = [...svg.matchAll(/width="([\d.]+)" height="16" fill="#e0a952"/g)].map((m) => parseFloat(m[1]));
   assert.equal(barWidths[0], 150);
   assert.equal(barWidths[1], 0);
+});
+
+test('renderPlayerCountChart returns an empty string when there is no data', () => {
+  assert.equal(renderPlayerCountChart([]), '');
+});
+
+test('renderPlayerCountChart draws a polyline with one point per sample', () => {
+  const svg = renderPlayerCountChart([
+    { date: '2026-08-01T00:00:00+00:00', count: 100 },
+    { date: '2026-08-02T00:00:00+00:00', count: 150 }
+  ]);
+  assert.match(svg, /class="player-count-chart"/);
+  const circleCount = (svg.match(/<circle/g) || []).length;
+  assert.equal(circleCount, 2);
+  assert.match(svg, /<polyline/);
+});
+
+test('renderSentimentChart returns an empty string when there is no data', () => {
+  assert.equal(renderSentimentChart([]), '');
+});
+
+test('renderSentimentChart draws a polyline keyed on positivePct', () => {
+  const svg = renderSentimentChart([
+    { date: '2026-08-01T00:00:00+00:00', positivePct: 80 },
+    { date: '2026-08-02T00:00:00+00:00', positivePct: 60 }
+  ]);
+  assert.match(svg, /class="sentiment-chart"/);
+  const circleCount = (svg.match(/<circle/g) || []).length;
+  assert.equal(circleCount, 2);
 });
 
 test('renderPriceLineChart sorts points chronologically regardless of input order', () => {

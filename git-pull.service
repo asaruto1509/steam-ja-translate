@@ -1,0 +1,9 @@
+[Unit]
+Description=Pull latest steam-ja-translate repo (keeps VM data files in sync with GitHub Actions cron commits)
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/opc/steam-ja-translate
+ExecStart=/usr/bin/git pull --ff-only
+User=opc
+Group=opc
