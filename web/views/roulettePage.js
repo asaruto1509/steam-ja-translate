@@ -1,0 +1,22 @@
+'use strict';
+var html = require('../lib/html.js');
+
+function renderRoulettePage(opts) {
+  opts = opts || {};
+  var title = html.escapeHtml(opts.title || '');
+  var spinEndpoint = html.escapeHtml(opts.spinEndpoint || '');
+  var backLinkText = html.escapeHtml(opts.backLinkText || 'トップに戻る');
+  return '<section class="roulette-page" data-spin-endpoint="' + spinEndpoint + '">'
+    + '<h2>' + title + '</h2>'
+    + '<div class="roulette-reel-wrap">'
+    + '<div class="roulette-reel" id="roulette-reel"></div>'
+    + '<div class="roulette-marker"></div>'
+    + '</div>'
+    + '<button type="button" class="roulette-spin-btn">🎰 回す</button>'
+    + '<div class="roulette-result" id="roulette-result"></div>'
+    + '<p class="roulette-error" id="roulette-error"></p>'
+    + '<p><a href="/">' + backLinkText + '</a></p>'
+    + '</section>';
+}
+
+module.exports = { renderRoulettePage: renderRoulettePage };
