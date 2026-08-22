@@ -56,7 +56,8 @@ app.get('/analyze', async function (req, res) {
       fetchPlayerCountHistory: localHistoryApi.fetchPlayerCountHistory,
       fetchSentimentHistory: localHistoryApi.fetchSentimentHistory,
       itadApiKey: process.env.ITAD_API_KEY,
-      buildAnalysisPrompt: analysisPrompt.buildAnalysisPrompt,
+      buildReasoningPrompt: analysisPrompt.buildReasoningPrompt,
+      buildStructuringPrompt: analysisPrompt.buildStructuringPrompt,
       parseAnalysis: reviewLib.parseAnalysis,
       apiKey: process.env.ONEMIN_API_KEY
     };

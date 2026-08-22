@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildAnalysisPrompt, parseAnalysis, formatReviewReply } = require('./review.js');
+const { buildReasoningPrompt, buildStructuringPrompt, parseAnalysis, formatReviewReply } = require('./review.js');
 
 test('formatReviewReply includes the Steam header image and store link when an appid is given', () => {
   const analysis = { verdict: '買い', reason: null, categories: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [] };
@@ -18,28 +18,41 @@ test('formatReviewReply shows a genre/category tag field when game context is gi
   assert.match(tagField.value, /シングルプレイヤー/);
 });
 
-test('buildAnalysisPrompt includes the game name and review text', () => {
-  const prompt = buildAnalysisPrompt('Hollow Knight', ['最高のメトロイドヴァニア']);
+test('buildReasoningPrompt includes the game name and review text', () => {
+  const prompt = buildReasoningPrompt('Hollow Knight', ['最高のメトロイドヴァニア']);
   assert.match(prompt, /Hollow Knight/);
   assert.match(prompt, /最高のメトロイドヴァニア/);
 });
 
-test('buildAnalysisPrompt includes genre/category context when given', () => {
-  const prompt = buildAnalysisPrompt('Hollow Knight', ['レビュー'], { genres: ['アクション'], categories: ['シングルプレイヤー'] });
+test('buildReasoningPrompt includes genre/category context when given', () => {
+  const prompt = buildReasoningPrompt('Hollow Knight', ['レビュー'], { genres: ['アクション'], categories: ['シングルプレイヤー'] });
   assert.match(prompt, /アクション/);
   assert.match(prompt, /シングルプレイヤー/);
 });
 
-test('buildAnalysisPrompt requests the expanded category list including localization', () => {
-  const prompt = buildAnalysisPrompt('Hollow Knight', ['レビュー']);
-  assert.match(prompt, /"日本語対応"/);
-  assert.match(prompt, /"ボリューム"/);
+test('buildReasoningPrompt asks about the expanded category list including localization, without a JSON schema', () => {
+  const prompt = buildReasoningPrompt('Hollow Knight', ['レビュー']);
+  assert.match(prompt, /日本語対応/);
+  assert.match(prompt, /ボリューム/);
+  assert.doesNotMatch(prompt, /"verdict"/);
 });
 
-test('buildAnalysisPrompt requests external critic scores via web search', () => {
-  const prompt = buildAnalysisPrompt('Hollow Knight', ['レビュー']);
-  assert.match(prompt, /"externalScores"/);
+test('buildReasoningPrompt asks the model to research external critic scores via web search', () => {
+  const prompt = buildReasoningPrompt('Hollow Knight', ['レビュー']);
   assert.match(prompt, /Metacritic/);
+});
+
+test('buildStructuringPrompt includes the game name and the reasoning text to structure', () => {
+  const prompt = buildStructuringPrompt('Hollow Knight', '総合的には買い。探索が楽しい。');
+  assert.match(prompt, /Hollow Knight/);
+  assert.match(prompt, /総合的には買い。探索が楽しい。/);
+});
+
+test('buildStructuringPrompt requests the full JSON schema with the expanded categories', () => {
+  const prompt = buildStructuringPrompt('Game', 'メモ');
+  assert.match(prompt, /"verdict"/);
+  assert.match(prompt, /"日本語対応"/);
+  assert.match(prompt, /"externalScores"/);
 });
 
 test('parseAnalysis extracts a JSON object from the AI response', () => {

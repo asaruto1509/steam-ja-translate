@@ -1,20 +1,34 @@
 'use strict';
 var steamLib = require('../lib/steam.js');
 var reviewCategories = require('../lib/reviewCategories.js');
+var THINKING_MODEL = require('../chat.js').THINKING_MODEL;
 
 var VERDICT_EMOJI = { '今すぐ買い': '🔥', '買い': '✅', 'セール待ち': '⏳', '人を選ぶ': '🤔', '見送り': '⛔' };
 
-function buildAnalysisPrompt(gameName, reviewTexts, gameContext) {
-  var joined = reviewTexts.join('\n---\n').slice(0, 3000);
+// 1段階目: JSON制約を課さず自由記述でじっくり考察させる(qwen3-vl-8b-thinkingで実行、Web検索有効)。
+function buildReasoningPrompt(gameName, reviewTexts, gameContext) {
+  var joined = reviewTexts.join('\n---\n').slice(0, 6000);
   var contextLine = '';
   if (gameContext && ((gameContext.genres && gameContext.genres.length) || (gameContext.categories && gameContext.categories.length))) {
     contextLine = 'このゲームは' + (gameContext.genres || []).join('・') + 'に属し、'
       + (gameContext.categories || []).join('・') + 'に対応しています。これを踏まえて判断してください。\n';
   }
-  return 'あなたはSteamゲームレビューの要約AIです。以下は「' + gameName + '」のユーザーレビュー抜粋です。\n'
+  return 'あなたはSteamゲームレビューの詳細分析AIです。以下は「' + gameName + '」のユーザーレビュー抜粋です。\n'
     + contextLine
-    + 'また、Web検索でこのゲームの外部評価(Metacritic、OpenCritic、IGN等の実在するレビューサイトのスコアや評)を調べ、分かった範囲で反映してください。\n'
-    + '次のJSON形式のみで回答してください。説明文やコードブロックは不要です。\n'
+    + 'Web検索でこのゲームの外部評価(Metacritic、OpenCritic、IGN等の実在するレビューサイトのスコアや評)も調べてください。\n'
+    + '次の観点を自由な文章でじっくり考察してください。結論を急がず、レビューの具体的な内容を踏まえて書いてください。\n'
+    + '・総合的な買い時判定(今すぐ買い/買い/セール待ち/人を選ぶ/見送りのいずれか)とその理由\n'
+    + '・次の評価軸それぞれについて、レビューから読み取れる範囲で所感と5段階の星評価(1〜5の整数)。該当する情報が無い軸は星評価を書かず省略してよい: '
+    + reviewCategories.CATEGORY_NAMES.join('、') + '\n'
+    + '・具体的な良い点、悪い点\n'
+    + '・こんな人におすすめ/おすすめできない人\n'
+    + '・調べて分かった外部評価\n\n'
+    + 'レビュー:\n' + joined;
+}
+
+// 2段階目: 1段階目の考察文を、既存の表示に使うJSON形式へ機械的に変換するだけの軽い呼び出し(webSearch不要)。
+function buildStructuringPrompt(gameName, reasoningText) {
+  return '以下は「' + gameName + '」についてのAIによる分析メモです。この内容だけを根拠に、次のJSON形式のみで出力してください。説明文やコードブロックは不要です。メモに書かれていない項目はnullまたは空配列にしてください。\n'
     + '{"verdict":"今すぐ買い/買い/セール待ち/人を選ぶ/見送りのいずれか",'
     + '"reason":"一言理由(20字程度)",'
     + '"categories":[' + reviewCategories.buildCategorySchema() + '],'
@@ -22,8 +36,8 @@ function buildAnalysisPrompt(gameName, reviewTexts, gameContext) {
     + '"cons":["具体的な悪い点(20字程度)を最大3つ"],'
     + '"audienceFor":["こんな人向け、を最大2つ"],'
     + '"audienceAgainst":["向いていない人、を最大2つ"],'
-    + '"externalScores":[{"source":"サイト名(例: Metacritic)","score":"スコアや評価(例: 87/100)"}を検索で見つかった範囲で最大4つ、見つからなければ空配列]}\n\n'
-    + 'レビュー:\n' + joined;
+    + '"externalScores":[{"source":"サイト名(例: Metacritic)","score":"スコアや評価(例: 87/100)"}を最大4つ、無ければ空配列]}\n\n'
+    + '分析メモ:\n' + reasoningText;
 }
 
 function extractJsonBlock(text) {
@@ -127,12 +141,14 @@ async function handleReviewCommand(interaction, deps) {
     reviewSummary = await deps.fetchReviewSummary(found.id);
     gameContext = await deps.fetchGameContext(found.id);
     if (apiKey) {
-      var reviews = await deps.fetchReviews(found.id, 15);
+      var reviews = await deps.fetchReviews(found.id, 30);
       if (reviews.length) {
         failureReason = 'parse_failed';
-        var prompt = buildAnalysisPrompt(found.name, reviews, gameContext);
         try {
-          var raw = await deps.fetchChatReply(prompt, apiKey, { webSearch: true });
+          var reasoningPrompt = buildReasoningPrompt(found.name, reviews, gameContext);
+          var reasoningText = await deps.fetchChatReply(reasoningPrompt, apiKey, { webSearch: true, model: THINKING_MODEL });
+          var structuringPrompt = buildStructuringPrompt(found.name, reasoningText);
+          var raw = await deps.fetchChatReply(structuringPrompt, apiKey, { webSearch: false });
           analysis = parseAnalysis(raw);
           if (!analysis) console.error('/review AI応答のパースに失敗しました。生テキスト: ' + String(raw).slice(0, 500));
         } catch (e) {
@@ -145,7 +161,8 @@ async function handleReviewCommand(interaction, deps) {
 }
 
 module.exports = {
-  buildAnalysisPrompt: buildAnalysisPrompt,
+  buildReasoningPrompt: buildReasoningPrompt,
+  buildStructuringPrompt: buildStructuringPrompt,
   parseAnalysis: parseAnalysis,
   formatReviewReply: formatReviewReply,
   handleReviewCommand: handleReviewCommand

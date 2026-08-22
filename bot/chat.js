@@ -8,6 +8,10 @@ var AI_FETCH_TIMEOUT_MS = 45000;
 // Web検索(webSearch:true)はさらに時間がかかり45秒では打ち切られることがあるため、その場合だけ長めに取る。
 var AI_FETCH_TIMEOUT_MS_SEARCH = 90000;
 
+// 1min.aiの無料枠内(クレジット消費0を実測確認済み)の推論特化モデル。じっくり考えさせたい
+// 分析系プロンプト(/reviewやdashboardの考察段階)でqwen3-8bの代わりに指定する。
+var THINKING_MODEL = 'qwen3-vl-8b-thinking';
+
 var MAX_HISTORY = 6;
 
 // 履歴はイミュータブルに扱う(呼び出し元のオブジェクトを書き換えない)。
@@ -81,9 +85,10 @@ function stripThinkBlock(text) {
 
 async function fetchChatReply(prompt, apiKey, options) {
   var webSearch = (options && options.webSearch) || false;
+  var model = (options && options.model) || 'qwen3-8b';
   var body = {
     type: 'UNIFY_CHAT_WITH_AI',
-    model: 'qwen3-8b',
+    model: model,
     promptObject: { prompt: prompt, settings: { historySettings: { isMixed: false, historyMessageLimit: 0 }, webSearchSettings: { webSearch: webSearch } } }
   };
   var r = await fetchWithTimeout('https://api.1min.ai/api/chat-with-ai', {
@@ -150,6 +155,7 @@ async function handleChatMessage(message, historyStore, apiKey, options) {
 
 module.exports = {
   MAX_HISTORY: MAX_HISTORY,
+  THINKING_MODEL: THINKING_MODEL,
   appendHistory: appendHistory,
   buildChatPrompt: buildChatPrompt,
   extractGameMentions: extractGameMentions,

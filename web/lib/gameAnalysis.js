@@ -1,5 +1,7 @@
 'use strict';
 
+var THINKING_MODEL = require('../../bot/chat.js').THINKING_MODEL;
+
 var NO_REVIEWS = { positive: [], negative: [] };
 var MAX_SIMILAR_GAMES = 5;
 
@@ -18,8 +20,11 @@ function hasReviews(reviews) {
 async function fetchAnalysis(deps, found, gameContext, reviews, extra) {
   if (!deps.apiKey || !hasReviews(reviews)) return null;
   return safe(function () {
-    var prompt = deps.buildAnalysisPrompt(found.name, reviews, gameContext, extra);
-    return deps.fetchChatReply(prompt, deps.apiKey, { webSearch: true }).then(function (raw) {
+    var reasoningPrompt = deps.buildReasoningPrompt(found.name, reviews, gameContext, extra);
+    return deps.fetchChatReply(reasoningPrompt, deps.apiKey, { webSearch: true, model: THINKING_MODEL }).then(function (reasoningText) {
+      var structuringPrompt = deps.buildStructuringPrompt(found.name, reasoningText);
+      return deps.fetchChatReply(structuringPrompt, deps.apiKey, { webSearch: false });
+    }).then(function (raw) {
       return deps.parseAnalysis(raw);
     });
   }, null);
@@ -59,7 +64,7 @@ async function fetchGameAnalysis(name, deps) {
     safe(function () { return deps.fetchGameContext(found.id); }, null),
     safe(function () { return deps.fetchPlayerCount(found.id); }, null),
     safe(function () { return deps.fetchAchievementStats(found.id); }, null),
-    deps.apiKey ? safe(function () { return deps.fetchOpposingReviews(found.id, 10); }, NO_REVIEWS) : Promise.resolve(NO_REVIEWS),
+    deps.apiKey ? safe(function () { return deps.fetchOpposingReviews(found.id, 20); }, NO_REVIEWS) : Promise.resolve(NO_REVIEWS),
     deps.itadApiKey ? safe(function () { return deps.fetchPriceHistory(found.id, deps.itadApiKey); }, []) : Promise.resolve([]),
     safe(function () { return deps.fetchPlayerCountHistory(found.id); }, []),
     safe(function () { return deps.fetchSentimentHistory(found.id); }, [])
