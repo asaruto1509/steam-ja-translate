@@ -29,6 +29,21 @@ function formatAchievementStats(stats) {
   };
 }
 
+function formatSimilarGames(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(function (g) {
+    return {
+      name: g.name,
+      appid: g.appid,
+      priceHtml: formatPriceHtml(g.priceDetail),
+      reviewSummaryText: g.reviewSummary
+        ? g.reviewSummary.positivePct + '% (' + g.reviewSummary.totalReviews.toLocaleString() + '件)'
+        : 'レビュー情報なし',
+      playerCountText: formatPlayerCount(g.playerCount)
+    };
+  });
+}
+
 function buildAnalysisViewModel(result) {
   if (!result.found) {
     return { notFound: true };
@@ -46,6 +61,9 @@ function buildAnalysisViewModel(result) {
     categories: (result.gameContext && result.gameContext.categories) || [],
     playerCountText: formatPlayerCount(result.playerCount),
     achievementInfo: formatAchievementStats(result.achievementStats),
+    priceHistoryPoints: Array.isArray(result.priceHistory) ? result.priceHistory : [],
+    reviewPositivePct: result.reviewSummary ? result.reviewSummary.positivePct : null,
+    similarGames: formatSimilarGames(result.similarGamesData),
     isFavorite: result.isFavorite === true,
     analysis: null
   };
@@ -57,7 +75,7 @@ function buildAnalysisViewModel(result) {
       reason: a.reason || '',
       categoryLines: (Array.isArray(a.categories) ? a.categories : [])
         .filter(function (c) { return c && typeof c.stars === 'number'; })
-        .map(function (c) { return { name: c.name, stars: starsLine(c.stars) }; }),
+        .map(function (c) { return { name: c.name, stars: starsLine(c.stars), starCount: c.stars }; }),
       pros: Array.isArray(a.pros) ? a.pros : [],
       cons: Array.isArray(a.cons) ? a.cons : [],
       audienceFor: Array.isArray(a.audienceFor) ? a.audienceFor : [],
