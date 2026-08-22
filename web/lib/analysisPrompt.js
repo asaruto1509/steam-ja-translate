@@ -30,7 +30,8 @@ function buildAnalysisPrompt(gameName, reviewsBySentiment, gameContext, extra) {
   var negative = (reviewsBySentiment && reviewsBySentiment.negative) || [];
 
   return 'あなたはSteamゲームレビューの詳細分析AIです。以下は「' + gameName + '」の好評レビューと不評レビューの抜粋です。'
-    + '両方を踏まえて公平に判断してください。\n'
+    + '両方を踏まえて公平に判断してください。'
+    + 'また、Web検索でこのゲームの外部評価(Metacritic、OpenCritic、IGN等の実在するレビューサイトのスコアや評)を調べ、分かった範囲で反映してください。\n'
     + buildContextLine(gameContext)
     + buildStatsLine(extra)
     + '次のJSON形式のみで回答してください。説明文やコードブロックは不要です。\n'
@@ -41,7 +42,8 @@ function buildAnalysisPrompt(gameName, reviewsBySentiment, gameContext, extra) {
     + '"cons":["具体的な悪い点(40字程度)を最大5つ"],'
     + '"audienceFor":["こんな人向け、を最大3つ"],'
     + '"audienceAgainst":["向いていない人、を最大3つ"],'
-    + '"similarGames":["似ている実在のSteamゲームのタイトルを最大5つ"]}\n\n'
+    + '"similarGames":["似ている実在のSteamゲームのタイトルを最大5つ"],'
+    + '"externalScores":[{"source":"サイト名(例: Metacritic)","score":"スコアや評価(例: 87/100)"}を検索で見つかった範囲で最大4つ、見つからなければ空配列]}\n\n'
     + '【好評レビュー】\n' + positive.join('\n---\n').slice(0, 2000) + '\n\n'
     + '【不評レビュー】\n' + negative.join('\n---\n').slice(0, 2000);
 }

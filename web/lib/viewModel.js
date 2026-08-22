@@ -79,7 +79,9 @@ function buildAnalysisViewModel(result) {
       pros: Array.isArray(a.pros) ? a.pros : [],
       cons: Array.isArray(a.cons) ? a.cons : [],
       audienceFor: Array.isArray(a.audienceFor) ? a.audienceFor : [],
-      audienceAgainst: Array.isArray(a.audienceAgainst) ? a.audienceAgainst : []
+      audienceAgainst: Array.isArray(a.audienceAgainst) ? a.audienceAgainst : [],
+      externalScores: (Array.isArray(a.externalScores) ? a.externalScores : [])
+        .filter(function (s) { return s && s.source && s.score; })
     };
   }
 

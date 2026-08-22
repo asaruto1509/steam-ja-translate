@@ -54,3 +54,9 @@ test('buildAnalysisPrompt omits stats lines when not provided', () => {
 test('buildAnalysisPrompt handles missing review arrays without throwing', () => {
   assert.doesNotThrow(() => buildAnalysisPrompt('Game', {}, null, {}));
 });
+
+test('buildAnalysisPrompt requests external critic scores via web search', () => {
+  const prompt = buildAnalysisPrompt('Game', { positive: [], negative: [] }, null, {});
+  assert.match(prompt, /"externalScores"/);
+  assert.match(prompt, /Metacritic/);
+});

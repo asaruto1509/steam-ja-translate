@@ -12,6 +12,7 @@ function buildAnalysisPrompt(gameName, reviewTexts, gameContext) {
   }
   return 'あなたはSteamゲームレビューの要約AIです。以下は「' + gameName + '」のユーザーレビュー抜粋です。\n'
     + contextLine
+    + 'また、Web検索でこのゲームの外部評価(Metacritic、OpenCritic、IGN等の実在するレビューサイトのスコアや評)を調べ、分かった範囲で反映してください。\n'
     + '次のJSON形式のみで回答してください。説明文やコードブロックは不要です。\n'
     + '{"verdict":"今すぐ買い/買い/セール待ち/人を選ぶ/見送りのいずれか",'
     + '"reason":"一言理由(20字程度)",'
@@ -19,7 +20,8 @@ function buildAnalysisPrompt(gameName, reviewTexts, gameContext) {
     + '"pros":["具体的な良い点(20字程度)を最大3つ"],'
     + '"cons":["具体的な悪い点(20字程度)を最大3つ"],'
     + '"audienceFor":["こんな人向け、を最大2つ"],'
-    + '"audienceAgainst":["向いていない人、を最大2つ"]}\n\n'
+    + '"audienceAgainst":["向いていない人、を最大2つ"],'
+    + '"externalScores":[{"source":"サイト名(例: Metacritic)","score":"スコアや評価(例: 87/100)"}を検索で見つかった範囲で最大4つ、見つからなければ空配列]}\n\n'
     + 'レビュー:\n' + joined;
 }
 
@@ -88,6 +90,11 @@ function formatReviewReply(gameName, analysis, reviewSummary, appid, gameContext
   if (analysis.audienceFor && analysis.audienceFor.length) fields.push({ name: '👍 こんな人向け', value: analysis.audienceFor.map(function (a) { return '・' + a; }).join('\n'), inline: true });
   if (analysis.audienceAgainst && analysis.audienceAgainst.length) fields.push({ name: '👎 向いていない人', value: analysis.audienceAgainst.map(function (a) { return '・' + a; }).join('\n'), inline: true });
 
+  var externalScores = (analysis.externalScores || []).filter(function (s) { return s && s.source && s.score; });
+  if (externalScores.length) {
+    fields.push({ name: '🌐 外部評価', value: externalScores.map(function (s) { return s.source + ': ' + s.score; }).join('\n') });
+  }
+
   if (reviewSummary) {
     fields.push({ name: '💬 ポジティブ率', value: reviewSummary.positivePct + '% (' + reviewSummary.totalReviews.toLocaleString() + '件のレビュー)' });
   }
@@ -123,9 +130,13 @@ async function handleReviewCommand(interaction, deps) {
       if (reviews.length) {
         failureReason = 'parse_failed';
         var prompt = buildAnalysisPrompt(found.name, reviews, gameContext);
-        var raw = await deps.fetchChatReply(prompt, apiKey, { webSearch: false });
-        analysis = parseAnalysis(raw);
-        if (!analysis) console.error('/review AI応答のパースに失敗しました。生テキスト: ' + String(raw).slice(0, 500));
+        try {
+          var raw = await deps.fetchChatReply(prompt, apiKey, { webSearch: true });
+          analysis = parseAnalysis(raw);
+          if (!analysis) console.error('/review AI応答のパースに失敗しました。生テキスト: ' + String(raw).slice(0, 500));
+        } catch (e) {
+          console.error('/review AI分析呼び出しに失敗しました: ' + e.message);
+        }
       }
     }
   }

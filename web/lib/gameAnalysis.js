@@ -19,7 +19,7 @@ async function fetchAnalysis(deps, found, gameContext, reviews, extra) {
   if (!deps.apiKey || !hasReviews(reviews)) return null;
   return safe(function () {
     var prompt = deps.buildAnalysisPrompt(found.name, reviews, gameContext, extra);
-    return deps.fetchChatReply(prompt, deps.apiKey, { webSearch: false }).then(function (raw) {
+    return deps.fetchChatReply(prompt, deps.apiKey, { webSearch: true }).then(function (raw) {
       return deps.parseAnalysis(raw);
     });
   }, null);

@@ -55,6 +55,28 @@ test('renderAnalysisPage renders verdict, category stars, pros, and cons', () =>
   assert.match(html, /アクション好き/);
 });
 
+test('renderAnalysisPage renders external critic scores when present', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [],
+    analysis: {
+      verdict: '買い', reason: '', categoryLines: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [],
+      externalScores: [{ source: 'Metacritic', score: '87/100' }]
+    }
+  });
+  assert.match(html, /Metacritic/);
+  assert.match(html, /87\/100/);
+});
+
+test('renderAnalysisPage omits the external scores section when empty', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [],
+    analysis: { verdict: '買い', reason: '', categoryLines: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [], externalScores: [] }
+  });
+  assert.doesNotMatch(html, /外部評価/);
+});
+
 test('renderAnalysisPage links the game name to the store page and shows the header image', () => {
   const html = renderAnalysisPage({
     notFound: false,

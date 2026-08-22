@@ -30,6 +30,12 @@ test('buildAnalysisPrompt includes genre/category context when given', () => {
   assert.match(prompt, /シングルプレイヤー/);
 });
 
+test('buildAnalysisPrompt requests external critic scores via web search', () => {
+  const prompt = buildAnalysisPrompt('Hollow Knight', ['レビュー']);
+  assert.match(prompt, /"externalScores"/);
+  assert.match(prompt, /Metacritic/);
+});
+
 test('parseAnalysis extracts a JSON object from the AI response', () => {
   const text = '{"verdict":"買い","reason":"コスパ良好","categories":[{"name":"ゲームプレイ","stars":4}],"pros":["操作性が良い"],"cons":["ボリューム少なめ"],"audienceFor":["探索好き"],"audienceAgainst":["ストーリー重視派"]}';
   const analysis = parseAnalysis(text);
@@ -96,6 +102,20 @@ test('formatReviewReply shows verdict, categories, pros, cons and audience field
   assert.doesNotMatch(categoryField.value, /ストーリー/);
   const positiveField = reply.embeds[0].fields.find(f => f.name.includes('ポジティブ'));
   assert.match(positiveField.value, /92%/);
+});
+
+test('formatReviewReply shows external critic scores when present', () => {
+  const analysis = { verdict: '買い', reason: null, categories: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [], externalScores: [{ source: 'Metacritic', score: '87/100' }] };
+  const reply = formatReviewReply('Some Game', analysis, null, '1', null);
+  const field = reply.embeds[0].fields.find(f => f.name.includes('外部評価'));
+  assert.ok(field);
+  assert.match(field.value, /Metacritic: 87\/100/);
+});
+
+test('formatReviewReply omits the external scores field when there are none', () => {
+  const analysis = { verdict: '買い', reason: null, categories: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [] };
+  const reply = formatReviewReply('Some Game', analysis, null, '1', null);
+  assert.ok(!reply.embeds[0].fields.some(f => f.name.includes('外部評価')));
 });
 
 test('formatReviewReply skips optional fields gracefully when data is missing', () => {

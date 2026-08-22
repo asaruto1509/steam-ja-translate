@@ -74,6 +74,11 @@ function renderAnalysisPage(vm) {
     }
     if (a.audienceFor.length) parts.push('<p>👍 ' + html.escapeHtml(a.audienceFor.join(', ')) + '</p>');
     if (a.audienceAgainst.length) parts.push('<p>👎 ' + html.escapeHtml(a.audienceAgainst.join(', ')) + '</p>');
+    if (a.externalScores && a.externalScores.length) {
+      parts.push('<div class="external-scores"><h4>🌐 外部評価</h4><ul>' + a.externalScores.map(function (s) {
+        return '<li>' + html.escapeHtml(s.source) + ': ' + html.escapeHtml(s.score) + '</li>';
+      }).join('') + '</ul></div>');
+    }
     parts.push('</section>');
   } else {
     parts.push('<p class="analysis-unavailable">AI分析は利用できませんでした</p>');

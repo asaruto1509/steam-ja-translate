@@ -233,6 +233,27 @@ test('buildAnalysisViewModel formats similar games with price, review, and playe
   }]);
 });
 
+test('buildAnalysisViewModel passes through valid externalScores entries', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null,
+    analysis: {
+      verdict: '買い', reason: '', categories: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [],
+      externalScores: [{ source: 'Metacritic', score: '87/100' }, { source: 'no score' }, null]
+    }
+  });
+  assert.deepEqual(vm.analysis.externalScores, [{ source: 'Metacritic', score: '87/100' }]);
+});
+
+test('buildAnalysisViewModel defaults externalScores to an empty array when missing', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null,
+    analysis: { verdict: '買い', reason: '', categories: [], pros: [], cons: [], audienceFor: [], audienceAgainst: [] }
+  });
+  assert.deepEqual(vm.analysis.externalScores, []);
+});
+
 test('buildAnalysisViewModel defaults similarGames to an empty array when missing', () => {
   const vm = buildAnalysisViewModel({
     found: { id: '1', name: 'Game' },
