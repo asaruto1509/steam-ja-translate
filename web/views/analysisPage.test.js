@@ -41,7 +41,7 @@ test('renderAnalysisPage renders verdict, category stars, pros, and cons', () =>
     analysis: {
       verdict: '買い',
       reason: '面白い',
-      categoryLines: [{ name: 'ゲームプレイ', stars: '★★★★☆' }],
+      categoryLines: [{ name: 'ゲームプレイ', stars: '★★★★☆', starCount: 4 }],
       pros: ['操作感が良い'],
       cons: ['ボリューム不足'],
       audienceFor: ['アクション好き'],
@@ -49,7 +49,7 @@ test('renderAnalysisPage renders verdict, category stars, pros, and cons', () =>
     }
   });
   assert.match(html, /買い/);
-  assert.match(html, /★★★★☆/);
+  assert.match(html, /4\/5/);
   assert.match(html, /操作感が良い/);
   assert.match(html, /ボリューム不足/);
   assert.match(html, /アクション好き/);
@@ -157,6 +157,90 @@ test('renderAnalysisPage escapes the name in the favorite form', () => {
     playerCountText: null, achievementInfo: null, isFavorite: false
   });
   assert.doesNotMatch(result, /<script>alert\(1\)<\/script>/);
+});
+
+test('renders a review pie chart when reviewPositivePct is a number', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: false,
+    priceHistoryPoints: [], reviewPositivePct: 90, similarGames: []
+  });
+  assert.match(result, /class="review-pie-chart"/);
+});
+
+test('omits the review pie chart when reviewPositivePct is not a number', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: false,
+    priceHistoryPoints: [], reviewPositivePct: null, similarGames: []
+  });
+  assert.doesNotMatch(result, /class="review-pie-chart"/);
+});
+
+test('renders a category bar chart instead of a plain list when categories are present', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [],
+    playerCountText: null, achievementInfo: null, isFavorite: false,
+    priceHistoryPoints: [], reviewPositivePct: null, similarGames: [],
+    analysis: {
+      verdict: '買い', reason: '', categoryLines: [{ name: 'ゲームプレイ', stars: '★★★★☆', starCount: 4 }],
+      pros: [], cons: [], audienceFor: [], audienceAgainst: []
+    }
+  });
+  assert.match(result, /class="category-bar-chart"/);
+  assert.doesNotMatch(result, /class="category-stars"/);
+});
+
+test('renders a price history chart when price history points exist', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: false,
+    priceHistoryPoints: [{ date: '2026-07-01T00:00:00+00:00', price: 1500 }],
+    reviewPositivePct: null, similarGames: []
+  });
+  assert.match(result, /class="price-history"/);
+  assert.match(result, /class="price-line-chart"/);
+});
+
+test('omits the price history section when there are no price history points', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: false,
+    priceHistoryPoints: [], reviewPositivePct: null, similarGames: []
+  });
+  assert.doesNotMatch(result, /class="price-history"/);
+});
+
+test('renders a similar games comparison table with escaped, linked names', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: false,
+    priceHistoryPoints: [], reviewPositivePct: null,
+    similarGames: [{
+      name: '<script>alert(1)</script>', appid: '2',
+      priceHtml: '¥500', reviewSummaryText: '90% (100件)', playerCountText: '10人'
+    }]
+  });
+  assert.match(result, /class="similar-games"/);
+  assert.match(result, /href="\/analyze\?name=%3Cscript%3Ealert\(1\)%3C%2Fscript%3E"/);
+  assert.doesNotMatch(result, /<script>alert\(1\)<\/script>/);
+  assert.match(result, /90% \(100件\)/);
+});
+
+test('omits the similar games section when there are none', () => {
+  const result = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null, achievementInfo: null, isFavorite: false,
+    priceHistoryPoints: [], reviewPositivePct: null, similarGames: []
+  });
+  assert.doesNotMatch(result, /class="similar-games"/);
 });
 
 test('renderAnalysisPage escapes the game name', () => {

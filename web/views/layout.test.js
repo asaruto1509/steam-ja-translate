@@ -49,3 +49,10 @@ test('renderLayout gives the favorite-form button a larger tap target', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /\.favorite-form button\{[^}]*min-height:44px/);
 });
+
+test('renderLayout includes styling for the new chart and comparison-table elements', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.similar-games/);
+  assert.match(page, /\.similar-games table\{/);
+  assert.match(page, /\.similar-games th,\.similar-games td\{/);
+});
