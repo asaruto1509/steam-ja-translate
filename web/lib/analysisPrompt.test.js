@@ -22,6 +22,11 @@ test('buildAnalysisPrompt requests the full JSON schema', () => {
   assert.match(prompt, /"audienceAgainst"/);
 });
 
+test('buildAnalysisPrompt requests similar game titles', () => {
+  const prompt = buildAnalysisPrompt('Game', { positive: [], negative: [] }, null, {});
+  assert.match(prompt, /"similarGames"/);
+});
+
 test('buildAnalysisPrompt includes genre/category context when provided', () => {
   const prompt = buildAnalysisPrompt('Game', { positive: [], negative: [] },
     { genres: ['アクション'], categories: ['シングルプレイヤー'] }, {});

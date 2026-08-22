@@ -40,7 +40,8 @@ function buildAnalysisPrompt(gameName, reviewsBySentiment, gameContext, extra) {
     + '"pros":["具体的な良い点(40字程度)を最大5つ"],'
     + '"cons":["具体的な悪い点(40字程度)を最大5つ"],'
     + '"audienceFor":["こんな人向け、を最大3つ"],'
-    + '"audienceAgainst":["向いていない人、を最大3つ"]}\n\n'
+    + '"audienceAgainst":["向いていない人、を最大3つ"],'
+    + '"similarGames":["似ている実在のSteamゲームのタイトルを最大5つ"]}\n\n'
     + '【好評レビュー】\n' + positive.join('\n---\n').slice(0, 2000) + '\n\n'
     + '【不評レビュー】\n' + negative.join('\n---\n').slice(0, 2000);
 }
