@@ -72,7 +72,7 @@ function renderLayout(bodyHtml, opts) {
     + '.roulette-spin-btn:disabled{opacity:0.6;cursor:default;transform:none;box-shadow:0 4px 0 #a1281d,0 8px 16px rgba(0,0,0,0.4)}'
     + '.roulette-result{margin-top:20px;animation:roulettePop 0.5s ease-out}'
     + '.roulette-result img{max-width:100%;max-height:200px;object-fit:cover;border-radius:10px;box-shadow:0 4px 20px rgba(246,199,68,0.35)}'
-    + '.roulette-img-fallback{width:100%;max-width:320px;height:100px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:32px;background:#0d1620;border-radius:8px}'
+    + '.roulette-img-fallback{width:100%;max-width:320px;height:100%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:32px;background:#0d1620;border-radius:8px}'
     + '.roulette-result .roulette-img-fallback{height:140px;font-size:52px}'
     + '.roulette-winner-banner{font-size:24px;font-weight:bold;color:#f6c744;margin:0 0 10px;text-shadow:0 0 12px rgba(246,199,68,0.6)}'
     + '@keyframes roulettePop{0%{opacity:0;transform:scale(0.7)}60%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}'
@@ -257,8 +257,7 @@ function renderLayout(bodyHtml, opts) {
     + 'function spin(candidates,winnerIndex){'
     + 'reel.innerHTML="";'
     + 'var sequence=[];'
-    + 'for(var r=0;r<REPEAT;r++){candidates.forEach(function(c){sequence.push(c);});}'
-    + 'sequence.push(candidates[(winnerIndex+1)%candidates.length]);' // 当選が最後の候補のとき、マーカー下の枠が空白にならないよう1件だけ継続表示用に追加
+    + 'for(var r=0;r<REPEAT+1;r++){candidates.forEach(function(c){sequence.push(c);});}'
     + 'sequence.forEach(function(c){'
     + 'var item=document.createElement("div");'
     + 'item.className="roulette-reel-item";'

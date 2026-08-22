@@ -16,7 +16,7 @@
 - **アニメーション形式**: 縦スロット(スロットマシン風)。候補のヘッダー画像を縦に並べたリールが高速スクロールした後、徐々に減速して中央の枠に当選ゲームが止まる。円形ルーレットや横カルーセルは不採用(実装コストと視覚効果のバランスでスロットを選択)。
 - **当選決定はサーバー側**: クライアントは乱数を持たない。`POST /api/roulette/<mode>/spin`が候補リストと`winnerIndex`を確定させて返し、クライアントは純粋に見た目のアニメーションだけを担当する。不正操作の余地がなく、ロジックのテストも容易。
 - **積みゲー判定基準**: `playtime_forever < 120分`(2時間未満)。Steam公式Web API `GetOwnedGames`(`include_played_free_games=1`)を新規に叩く。これには新しい`STEAM_API_KEY`(通常のWeb APIキー、ユーザーが取得済み)が要る。プロフィールとゲーム詳細が非公開の場合は0件になる(エラー処理で対応)。
-- **おすすめモードの当選バイアス**: 均等ランダムではなく、既存の`/recommend`修正(`scripts/recommend-games.js`の`pickAnalyzableGames`)と同じ「レビューがある候補を優先」ロジックを流用する。理由: せっかく回して当たったゲームが分析ページで価格だけのスカスカな表示だと体験が悪いため。積みゲーモードは(ユーザー自身が購入した実績のあるタイトル群なので相対的にメジャーな傾向があり)均等ランダムのままでよい。
+- **おすすめモードの当選**: 均等ランダム(`roulette.pickWinner`)。当初は既存の`/recommend`修正(`scripts/recommend-games.js`の`pickAnalyzableGames`)と同じ「レビューがある候補を優先」バイアスを流用する設計だったが、実機確認(試験的に4回回したところ当選が同じ2候補に偏った: 0,8,8,0)で、レビューが少ない新作寄りの候補プールではほぼ毎回同じ1〜2件にしか当たらず、ルーレットの「回す楽しさ」を損なうことが判明したため、ユーザー承認のうえバイアスを廃止し均等ランダムに戻した。積みゲーモードはもともと均等ランダムで変更なし。
 - **Bot(Discord)側は対象外**: アニメーションはWebでしか表現できないため、今回はWebダッシュボードのみ。Discord向けの軽量版(即座にテキストで結果を返す版)は別の機会に検討する。
 - **`bot/**`・`scripts/**`は一切変更しない**(既存の標準制約)。`scripts/recommend-games.js`の`fetchFeaturedPool`/`pickRealGames`(`bot/lib/gamePool.js`)/`pickAnalyzableGames`を読み取り専用で再利用する。
 
@@ -30,7 +30,7 @@ POST /api/roulette/backlog/spin
   → steamLib.fetchOwnedGames(steamId64, apiKey) (新規、GetOwnedGames)
   → backlogPool.filterBacklog(games, 120) で積みゲーだけに絞る
   → 0件ならエラーJSON
-  → 候補をシャッフルし、最大12件に切り詰める(12件未満ならある分だけ使う。多すぎるとリール読み込みが重いための上限)
+  → 候補をシャッフルし、最大20件に切り詰める(20件未満ならある分だけ使う。多すぎるとリール読み込みが重いための上限)
   → roulette.pickWinner(candidates, Math.random) で当選を決定
   → { candidates: [{id,name,imageUrl}], winnerIndex } を返す
 
@@ -38,10 +38,9 @@ GET /roulette/recommend
   → 同様の静的ページシェル
 
 POST /api/roulette/recommend/spin
-  → recommendGames.fetchFeaturedPool() → pickRandomGames → gamePool.pickRealGames で実在ゲームを最大10件選定(10件未満ならある分だけ)
-  → 各候補のレビューを取得(既存の/recommend修正と同じ流れ)
-  → レビュー件数が3件以上ある候補だけを抽出し、1件以上あればその部分集合から roulette.pickWinner で当選を選ぶ
-    (該当インデックスは元のcandidates配列上のインデックスに変換する)。0件ならcandidates全体からpickWinnerで選ぶ
+  → recommendGames.fetchFeaturedPool() → pickRandomGames → gamePool.pickRealGames で実在ゲームを最大16件選定(16件未満ならある分だけ)
+  → 各候補をcandidates化(画像はfetchFeaturedPoolが返すcapsule画像を優先、なければheaderImageUrlで構築)
+  → roulette.pickWinner(candidates) で均等ランダムに当選を決定(レビュー有無によるバイアスは廃止済み。理由は決定事項を参照)
   → { candidates: [{id,name,imageUrl}], winnerIndex } を返す
 
 クライアントJS(共通):
