@@ -34,3 +34,9 @@ test('renderTopPage handles a missing history/favorites input without throwing',
   assert.doesNotThrow(() => renderTopPage({}));
   assert.doesNotThrow(() => renderTopPage());
 });
+
+test('renderTopPage includes links to both roulette pages', () => {
+  const page = renderTopPage({ history: [], favorites: [] });
+  assert.match(page, /href="\/roulette\/backlog"/);
+  assert.match(page, /href="\/roulette\/recommend"/);
+});

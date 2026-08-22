@@ -81,3 +81,15 @@ test('renderLayout includes styling for the new chart and comparison-table eleme
   assert.match(page, /\.similar-games table\{/);
   assert.match(page, /\.similar-games th,\.similar-games td\{/);
 });
+
+test('renderLayout includes roulette reel styling', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-reel-wrap\{/);
+  assert.match(page, /\.roulette-marker\{/);
+});
+
+test('renderLayout wires the roulette spin button to fetch the page-specific spin endpoint', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /roulette-spin-btn/);
+  assert.match(page, /data-spin-endpoint/);
+});
