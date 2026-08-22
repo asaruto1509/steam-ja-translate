@@ -182,6 +182,7 @@ function renderLayout(bodyHtml, opts) {
     + 'reel.innerHTML="";'
     + 'var sequence=[];'
     + 'for(var r=0;r<REPEAT;r++){candidates.forEach(function(c){sequence.push(c);});}'
+    + 'sequence.push(candidates[(winnerIndex+1)%candidates.length]);' // 当選が最後の候補のとき、マーカー下の枠が空白にならないよう1件だけ継続表示用に追加
     + 'sequence.forEach(function(c){'
     + 'var item=document.createElement("div");'
     + 'item.className="roulette-reel-item";'
