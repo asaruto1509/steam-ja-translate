@@ -30,9 +30,27 @@ test('renderLayout includes a loading overlay explaining the wait time', () => {
 
 test('renderLayout includes a script that shows the loading overlay on form submit', () => {
   const page = renderLayout('<p>x</p>', {});
-  assert.match(page, /querySelectorAll\("form"\)/);
+  assert.match(page, /querySelectorAll\("form:not\(\.chat-form\)"\)/);
   assert.match(page, /addEventListener\("submit"/);
   assert.match(page, /classList\.add\("loading"\)/);
+});
+
+test('renderLayout includes chat widget styling', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.chat-widget\{/);
+  assert.match(page, /\.chat-message-user\{/);
+  assert.match(page, /\.chat-message-assistant\{/);
+});
+
+test('renderLayout excludes chat forms from the full-page loading overlay', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /form:not\(\.chat-form\)/);
+});
+
+test('renderLayout wires chat widgets to POST /chat/message and /chat/clear via fetch', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /fetch\("\/chat\/message"/);
+  assert.match(page, /fetch\("\/chat\/clear"/);
 });
 
 test('renderLayout includes a search suggestions dropdown wired to the search input', () => {

@@ -14,6 +14,9 @@ var reviewLib = require('../bot/commands/review.js');
 var analysisPrompt = require('./lib/analysisPrompt.js');
 var store = require('./lib/store.js');
 var topPage = require('./views/topPage.js');
+var chatStore = require('./lib/chatStore.js');
+var chatPrompt = require('./lib/chatPrompt.js');
+var chatWidget = require('./views/chatWidget.js');
 
 var PORT = process.env.PORT || 3000;
 var HOST = process.env.BIND_HOST || '127.0.0.1';
@@ -30,9 +33,11 @@ app.get('/robots.txt', function (req, res) {
 
 app.use(authLib.createBasicAuthMiddleware(process.env.WEB_DASHBOARD_USER, process.env.WEB_DASHBOARD_PASS));
 app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
 app.get('/', function (req, res) {
-  var body = topPage.renderTopPage({ history: store.getHistory(), favorites: store.getFavorites() });
+  var body = topPage.renderTopPage({ history: store.getHistory(), favorites: store.getFavorites() })
+    + chatWidget.renderChatWidget(null, chatStore.getConversation(null));
   res.send(layout.renderLayout(body, {}));
 });
 
@@ -86,11 +91,74 @@ app.get('/analyze', async function (req, res) {
     }
     var vm = viewModel.buildAnalysisViewModel(result);
     var body = analysisPage.renderAnalysisPage(vm);
+    if (result.found) {
+      body += chatWidget.renderChatWidget(vm.appid, chatStore.getConversation(vm.appid));
+    }
     res.send(layout.renderLayout(body, { query: name }));
   } catch (e) {
     console.error('/analyze failed:', e);
     res.status(500).send(layout.renderLayout('<p class="error">エラーが発生しました。</p>', { query: name }));
   }
+});
+
+async function buildChatGameContext(appid) {
+  try {
+    var results = await Promise.all([
+      steamLib.fetchPriceDetail(appid),
+      steamLib.fetchReviewSummary(appid),
+      steamLib.fetchGameContext(appid)
+    ]);
+    var priceDetail = results[0];
+    var reviewSummary = results[1];
+    var context = results[2];
+    if (!priceDetail) return null;
+    return {
+      name: priceDetail.name,
+      reviewSummaryText: reviewSummary ? (reviewSummary.positivePct + '% (' + reviewSummary.totalReviews.toLocaleString() + '件)') : null,
+      categories: context ? context.categories : []
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+app.post('/chat/message', async function (req, res) {
+  try {
+    var scope = (typeof req.body.scope === 'string' && req.body.scope) ? req.body.scope : null;
+    var rawMessage = typeof req.body.message === 'string' ? req.body.message : '';
+    var message = rawMessage.trim().slice(0, 2000);
+    if (!message) {
+      res.status(400).json({ error: 'empty message' });
+      return;
+    }
+
+    var gameContext = scope ? await buildChatGameContext(scope) : null;
+    var history = chatStore.getConversation(scope);
+    var prompt = chatPrompt.buildChatPrompt(history, message, gameContext);
+
+    var reply;
+    try {
+      reply = await chatLib.fetchChatReply(prompt, process.env.ONEMIN_API_KEY, { webSearch: true });
+    } catch (e) {
+      reply = '';
+    }
+    if (!reply) reply = 'うまく返答を生成できなかった…';
+
+    var now = Date.now();
+    chatStore.addMessage(scope, { role: 'user', text: message, at: now });
+    chatStore.addMessage(scope, { role: 'assistant', text: reply, at: now });
+
+    res.json({ reply: reply });
+  } catch (e) {
+    console.error('/chat/message failed:', e);
+    res.status(500).json({ error: 'internal error' });
+  }
+});
+
+app.post('/chat/clear', function (req, res) {
+  var scope = (typeof req.body.scope === 'string' && req.body.scope) ? req.body.scope : null;
+  chatStore.clearConversation(scope);
+  res.json({ ok: true });
 });
 
 app.post('/favorites/add', function (req, res) {
