@@ -30,6 +30,12 @@ test('buildAnalysisPrompt includes genre/category context when given', () => {
   assert.match(prompt, /シングルプレイヤー/);
 });
 
+test('buildAnalysisPrompt requests the expanded category list including localization', () => {
+  const prompt = buildAnalysisPrompt('Hollow Knight', ['レビュー']);
+  assert.match(prompt, /"日本語対応"/);
+  assert.match(prompt, /"ボリューム"/);
+});
+
 test('buildAnalysisPrompt requests external critic scores via web search', () => {
   const prompt = buildAnalysisPrompt('Hollow Knight', ['レビュー']);
   assert.match(prompt, /"externalScores"/);

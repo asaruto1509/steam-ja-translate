@@ -5,7 +5,7 @@ function renderCategoryBarChart(categoryLines) {
   if (!Array.isArray(categoryLines) || !categoryLines.length) return '';
   var rowHeight = 24;
   var maxBarWidth = 150;
-  var labelWidth = 90;
+  var labelWidth = 140;
   var width = labelWidth + maxBarWidth + 40;
   var height = categoryLines.length * rowHeight;
   var rows = categoryLines.map(function (c, i) {

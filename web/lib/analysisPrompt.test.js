@@ -55,6 +55,13 @@ test('buildAnalysisPrompt handles missing review arrays without throwing', () =>
   assert.doesNotThrow(() => buildAnalysisPrompt('Game', {}, null, {}));
 });
 
+test('buildAnalysisPrompt requests the expanded category list including localization', () => {
+  const prompt = buildAnalysisPrompt('Game', { positive: [], negative: [] }, null, {});
+  assert.match(prompt, /"日本語対応"/);
+  assert.match(prompt, /"ボリューム"/);
+  assert.match(prompt, /"コミュニティ・人口"/);
+});
+
 test('buildAnalysisPrompt requests external critic scores via web search', () => {
   const prompt = buildAnalysisPrompt('Game', { positive: [], negative: [] }, null, {});
   assert.match(prompt, /"externalScores"/);
