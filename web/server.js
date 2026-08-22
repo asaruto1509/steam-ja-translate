@@ -17,6 +17,11 @@ var topPage = require('./views/topPage.js');
 var chatStore = require('./lib/chatStore.js');
 var chatPrompt = require('./lib/chatPrompt.js');
 var chatWidget = require('./views/chatWidget.js');
+var roulette = require('./lib/roulette.js');
+var backlogPool = require('./lib/backlogPool.js');
+var roulettePage = require('./views/roulettePage.js');
+var recommendGames = require('../scripts/recommend-games.js');
+var gamePool = require('../bot/lib/gamePool.js');
 
 var PORT = process.env.PORT || 3000;
 var HOST = process.env.BIND_HOST || '127.0.0.1';
@@ -98,6 +103,93 @@ app.get('/analyze', async function (req, res) {
   } catch (e) {
     console.error('/analyze failed:', e);
     res.status(500).send(layout.renderLayout('<p class="error">エラーが発生しました。</p>', { query: name }));
+  }
+});
+
+app.get('/roulette/backlog', function (req, res) {
+  var body = roulettePage.renderRoulettePage({
+    title: '🎰 積みゲールーレット',
+    spinEndpoint: '/api/roulette/backlog/spin'
+  });
+  res.send(layout.renderLayout(body, {}));
+});
+
+app.get('/roulette/recommend', function (req, res) {
+  var body = roulettePage.renderRoulettePage({
+    title: '🎰 おすすめルーレット',
+    spinEndpoint: '/api/roulette/recommend/spin'
+  });
+  res.send(layout.renderLayout(body, {}));
+});
+
+var BACKLOG_MAX_MINUTES = 120;
+var BACKLOG_MAX_CANDIDATES = 12;
+
+app.post('/api/roulette/backlog/spin', async function (req, res) {
+  try {
+    var steamId64 = process.env.STEAM_ID64;
+    var apiKey = process.env.STEAM_API_KEY;
+    if (!steamId64 || !apiKey) {
+      res.json({ error: 'not_configured' });
+      return;
+    }
+    var owned = await backlogPool.fetchOwnedGames(steamId64, apiKey);
+    var backlog = backlogPool.filterBacklog(owned, BACKLOG_MAX_MINUTES);
+    if (!backlog.length) {
+      res.json({ error: 'no_candidates' });
+      return;
+    }
+    var shuffled = recommendGames.pickRandomGames(backlog, backlog.length);
+    var candidates = shuffled.slice(0, BACKLOG_MAX_CANDIDATES);
+    var winnerIndex = roulette.pickWinner(candidates);
+    res.json(roulette.buildSpinPayload(candidates, winnerIndex));
+  } catch (e) {
+    console.error('/api/roulette/backlog/spin failed:', e);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+var RECOMMEND_MAX_CANDIDATES = 10;
+var RECOMMEND_MIN_REVIEWS = 3;
+
+app.post('/api/roulette/recommend/spin', async function (req, res) {
+  try {
+    var pool = await recommendGames.fetchFeaturedPool();
+    var shuffledPool = recommendGames.pickRandomGames(pool, pool.length);
+    var realGames = await gamePool.pickRealGames(shuffledPool, RECOMMEND_MAX_CANDIDATES, steamLib.isRealGame, 25);
+    if (!realGames.length) {
+      res.json({ error: 'no_candidates' });
+      return;
+    }
+    var candidates = realGames.map(function (g) {
+      return { id: g.id, name: g.name, imageUrl: steamLib.headerImageUrl(g.id) };
+    });
+
+    // レビューが3件以上ある候補のインデックスだけを集め、その部分集合の中から当選を選ぶ
+    // (せっかく回して当たったゲームがAI分析なしの価格だけカードだと寂しいため)。
+    // 該当が1件も無ければ候補全体から均等ランダムで選ぶ。
+    var reviewedIndexes = [];
+    for (var i = 0; i < candidates.length; i++) {
+      try {
+        var reviews = await steamLib.fetchReviewTexts(candidates[i].id, RECOMMEND_MIN_REVIEWS);
+        if (reviews.length >= RECOMMEND_MIN_REVIEWS) reviewedIndexes.push(i);
+      } catch (e) {
+        // このゲームはレビュー取得に失敗しただけで、候補からは外れるだけ。全体は失敗させない。
+      }
+    }
+
+    var winnerIndex;
+    if (reviewedIndexes.length) {
+      var pickedAmongReviewed = roulette.pickWinner(reviewedIndexes);
+      winnerIndex = reviewedIndexes[pickedAmongReviewed];
+    } else {
+      winnerIndex = roulette.pickWinner(candidates);
+    }
+
+    res.json(roulette.buildSpinPayload(candidates, winnerIndex));
+  } catch (e) {
+    console.error('/api/roulette/recommend/spin failed:', e);
+    res.status(500).json({ error: 'internal_error' });
   }
 });
 
