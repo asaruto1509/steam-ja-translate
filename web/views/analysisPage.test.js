@@ -123,6 +123,30 @@ test('renderAnalysisPage shows achievement stats including the rarest achievemen
   assert.match(html, /0\.5/);
 });
 
+test('renderAnalysisPage shows the achievement distribution chart when present', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null,
+    achievementInfo: {
+      count: 6, avgUnlockPct: '30.0', rarestName: 'X', rarestPercent: 1,
+      distribution: [{ label: '0-20%', count: 2 }, { label: '20-40%', count: 4 }]
+    }
+  });
+  assert.match(html, /実績達成率の分布/);
+  assert.match(html, /<svg class="achievement-distribution-chart"/);
+});
+
+test('renderAnalysisPage omits the achievement distribution chart when empty', () => {
+  const html = renderAnalysisPage({
+    notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',
+    reviewSummaryText: 'x', genres: [], categories: [], analysis: null,
+    playerCountText: null,
+    achievementInfo: { count: 50, avgUnlockPct: '23.5', rarestName: 'Secret Ending', rarestPercent: 0.5, distribution: [] }
+  });
+  assert.doesNotMatch(html, /実績達成率の分布/);
+});
+
 test('renderAnalysisPage omits the achievement section when unavailable', () => {
   const html = renderAnalysisPage({
     notFound: false, name: 'Game', appid: '1', priceHtml: '¥100',

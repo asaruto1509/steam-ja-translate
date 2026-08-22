@@ -82,7 +82,8 @@ async function fetchAchievementStats(appid) {
   return {
     count: list.length,
     avgUnlockPct: total / list.length,
-    rarest: { name: rarest.name, percent: parseFloat(rarest.percent) }
+    rarest: { name: rarest.name, percent: parseFloat(rarest.percent) },
+    percentages: list.map(function (a) { return parseFloat(a.percent); })
   };
 }
 

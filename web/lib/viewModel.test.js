@@ -132,8 +132,26 @@ test('buildAnalysisViewModel formats achievement stats', () => {
     achievementStats: { count: 50, avgUnlockPct: 23.456, rarest: { name: 'Secret Ending', percent: 0.5 } }
   });
   assert.deepEqual(vm.achievementInfo, {
-    count: 50, avgUnlockPct: '23.5', rarestName: 'Secret Ending', rarestPercent: 0.5
+    count: 50, avgUnlockPct: '23.5', rarestName: 'Secret Ending', rarestPercent: 0.5, distribution: []
   });
+});
+
+test('buildAnalysisViewModel buckets achievement percentages into a 5-band distribution', () => {
+  const vm = buildAnalysisViewModel({
+    found: { id: '1', name: 'Game' },
+    priceDetail: null, reviewSummary: null, gameContext: null, analysis: null,
+    achievementStats: {
+      count: 6, avgUnlockPct: 50, rarest: { name: 'X', percent: 1 },
+      percentages: [1, 15, 25, 65, 99, 100]
+    }
+  });
+  assert.deepEqual(vm.achievementInfo.distribution, [
+    { label: '0-20%', count: 2 },
+    { label: '20-40%', count: 1 },
+    { label: '40-60%', count: 0 },
+    { label: '60-80%', count: 1 },
+    { label: '80-100%', count: 2 }
+  ]);
 });
 
 test('buildAnalysisViewModel leaves achievementInfo null when achievement stats are unavailable', () => {

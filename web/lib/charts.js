@@ -73,8 +73,29 @@ function renderPriceLineChart(pricePoints) {
     + polyline + circles + '</svg>';
 }
 
+function renderAchievementDistributionChart(buckets) {
+  if (!Array.isArray(buckets) || !buckets.length) return '';
+  var rowHeight = 24;
+  var maxBarWidth = 150;
+  var labelWidth = 90;
+  var width = labelWidth + maxBarWidth + 40;
+  var height = buckets.length * rowHeight;
+  var maxCount = Math.max.apply(null, buckets.map(function (b) { return b.count; })) || 1;
+  var rows = buckets.map(function (b, i) {
+    var barWidth = (b.count / maxCount) * maxBarWidth;
+    var y = i * rowHeight;
+    var label = html.escapeHtml(b.label);
+    return '<text x="0" y="' + (y + rowHeight / 2 + 4) + '" font-size="12" fill="#c7d5e0">' + label + '</text>'
+      + '<rect x="' + labelWidth + '" y="' + (y + 4) + '" width="' + maxBarWidth + '" height="' + (rowHeight - 8) + '" fill="#2a3f5a"></rect>'
+      + '<rect x="' + labelWidth + '" y="' + (y + 4) + '" width="' + barWidth + '" height="' + (rowHeight - 8) + '" fill="#e0a952"></rect>'
+      + '<text x="' + (labelWidth + maxBarWidth + 8) + '" y="' + (y + rowHeight / 2 + 4) + '" font-size="12" fill="#c7d5e0">' + b.count + '</text>';
+  }).join('');
+  return '<svg class="achievement-distribution-chart" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">' + rows + '</svg>';
+}
+
 module.exports = {
   renderCategoryBarChart: renderCategoryBarChart,
   renderReviewPieChart: renderReviewPieChart,
-  renderPriceLineChart: renderPriceLineChart
+  renderPriceLineChart: renderPriceLineChart,
+  renderAchievementDistributionChart: renderAchievementDistributionChart
 };

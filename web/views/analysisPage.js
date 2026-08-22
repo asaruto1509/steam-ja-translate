@@ -48,6 +48,10 @@ function renderAnalysisPage(vm) {
       achievementLine += '(最レア: ' + html.escapeHtml(ai.rarestName) + ' ' + html.escapeHtml(ai.rarestPercent) + '%)';
     }
     parts.push('<p class="achievements">' + achievementLine + '</p>');
+    if (ai.distribution && ai.distribution.length) {
+      parts.push('<section class="achievement-distribution"><h3>実績達成率の分布</h3>'
+        + charts.renderAchievementDistributionChart(ai.distribution) + '</section>');
+    }
   }
 
   if (vm.priceHistoryPoints && vm.priceHistoryPoints.length) {

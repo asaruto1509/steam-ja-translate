@@ -19,13 +19,27 @@ function formatPlayerCount(playerCount) {
   return typeof playerCount === 'number' ? playerCount.toLocaleString() + '人' : null;
 }
 
+var ACHIEVEMENT_BUCKET_LABELS = ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%'];
+
+// 実績ごとの世界達成率を5段階(易しい順)に振り分け、難易度の分布を見せる用。
+function bucketAchievementPercentages(percentages) {
+  if (!Array.isArray(percentages) || !percentages.length) return [];
+  var counts = [0, 0, 0, 0, 0];
+  percentages.forEach(function (p) {
+    var idx = Math.min(4, Math.floor(Math.max(0, Math.min(100, p)) / 20));
+    counts[idx]++;
+  });
+  return ACHIEVEMENT_BUCKET_LABELS.map(function (label, i) { return { label: label, count: counts[i] }; });
+}
+
 function formatAchievementStats(stats) {
   if (!stats || typeof stats.count !== 'number') return null;
   return {
     count: stats.count,
     avgUnlockPct: typeof stats.avgUnlockPct === 'number' ? stats.avgUnlockPct.toFixed(1) : null,
     rarestName: stats.rarest ? stats.rarest.name : null,
-    rarestPercent: stats.rarest && typeof stats.rarest.percent === 'number' ? stats.rarest.percent : null
+    rarestPercent: stats.rarest && typeof stats.rarest.percent === 'number' ? stats.rarest.percent : null,
+    distribution: bucketAchievementPercentages(stats.percentages)
   };
 }
 
