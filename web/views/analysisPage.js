@@ -1,6 +1,7 @@
 'use strict';
 var html = require('../lib/html.js');
 var steamLib = require('../../bot/lib/steam.js');
+var charts = require('../lib/charts.js');
 
 function renderAnalysisPage(vm) {
   if (vm.notFound) {
@@ -27,6 +28,9 @@ function renderAnalysisPage(vm) {
   }
   parts.push('<p class="price">💴 ' + vm.priceHtml + '</p>');
   parts.push('<p class="reviews">💬 ' + html.escapeHtml(vm.reviewSummaryText) + '</p>');
+  if (typeof vm.reviewPositivePct === 'number') {
+    parts.push('<div class="review-chart">' + charts.renderReviewPieChart(vm.reviewPositivePct) + '</div>');
+  }
 
   var tags = vm.genres.concat(vm.categories);
   if (tags.length) {
@@ -46,15 +50,17 @@ function renderAnalysisPage(vm) {
     parts.push('<p class="achievements">' + achievementLine + '</p>');
   }
 
+  if (vm.priceHistoryPoints && vm.priceHistoryPoints.length) {
+    parts.push('<section class="price-history"><h3>価格推移</h3>' + charts.renderPriceLineChart(vm.priceHistoryPoints) + '</section>');
+  }
+
   if (vm.analysis) {
     var a = vm.analysis;
     parts.push('<section class="analysis">');
     parts.push('<h3>' + html.escapeHtml(a.verdict) + '</h3>');
     if (a.reason) parts.push('<p>' + html.escapeHtml(a.reason) + '</p>');
     if (a.categoryLines.length) {
-      parts.push('<ul class="category-stars">' + a.categoryLines.map(function (c) {
-        return '<li>' + html.escapeHtml(c.name) + ' ' + c.stars + '</li>';
-      }).join('') + '</ul>');
+      parts.push('<div class="category-bar-chart-wrap">' + charts.renderCategoryBarChart(a.categoryLines) + '</div>');
     }
     if (a.pros.length) {
       parts.push('<div class="pros"><h4>✓ 良い点</h4><ul>' + a.pros.map(function (p) {
@@ -71,6 +77,17 @@ function renderAnalysisPage(vm) {
     parts.push('</section>');
   } else {
     parts.push('<p class="analysis-unavailable">AI分析は利用できませんでした</p>');
+  }
+
+  if (vm.similarGames && vm.similarGames.length) {
+    parts.push('<section class="similar-games"><h3>類似ゲーム比較</h3><table><thead><tr><th>ゲーム</th><th>価格</th><th>評価</th><th>プレイヤー数</th></tr></thead><tbody>'
+      + vm.similarGames.map(function (g) {
+        return '<tr><td><a href="/analyze?name=' + encodeURIComponent(g.name) + '">' + html.escapeHtml(g.name) + '</a></td>'
+          + '<td>' + g.priceHtml + '</td>'
+          + '<td>' + html.escapeHtml(g.reviewSummaryText) + '</td>'
+          + '<td>' + html.escapeHtml(g.playerCountText || '不明') + '</td></tr>';
+      }).join('')
+      + '</tbody></table></section>');
   }
 
   parts.push('</article>');
