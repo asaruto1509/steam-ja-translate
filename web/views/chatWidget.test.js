@@ -22,6 +22,22 @@ test('renderChatWidget escapes message text', () => {
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
 });
 
+test('renderChatWidget renders **bold** markdown as <strong> in assistant messages', () => {
+  const html = renderChatWidget(null, [{ role: 'assistant', text: 'これは**重要**な情報です' }]);
+  assert.match(html, /これは<strong>重要<\/strong>な情報です/);
+});
+
+test('renderChatWidget does not interpret markdown in user messages', () => {
+  const html = renderChatWidget(null, [{ role: 'user', text: 'これは**重要**な情報です' }]);
+  assert.match(html, /これは\*\*重要\*\*な情報です/);
+});
+
+test('renderChatWidget escapes HTML in assistant messages even with bold markdown present', () => {
+  const html = renderChatWidget(null, [{ role: 'assistant', text: '**<script>alert(1)</script>**' }]);
+  assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
+  assert.match(html, /<strong>&lt;script&gt;/);
+});
+
 test('renderChatWidget sets data-scope to the given appid', () => {
   const html = renderChatWidget('367520', []);
   assert.match(html, /data-scope="367520"/);

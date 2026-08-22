@@ -1,9 +1,16 @@
 'use strict';
 var html = require('../lib/html.js');
 
+// AIの返答には**太字**のようなMarkdown記法が混ざることがあるため、先にエスケープしてから
+// (エスケープ後の安全な文字列に対して)**...**だけ<strong>に変換する。innerHTML由来のXSSは発生しない。
+function renderMarkdownSafe(text) {
+  return html.escapeHtml(text).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+}
+
 function renderMessage(m) {
   var roleClass = m.role === 'assistant' ? 'chat-message-assistant' : 'chat-message-user';
-  return '<div class="chat-message ' + roleClass + '">' + html.escapeHtml(m.text) + '</div>';
+  var content = m.role === 'assistant' ? renderMarkdownSafe(m.text) : html.escapeHtml(m.text);
+  return '<div class="chat-message ' + roleClass + '">' + content + '</div>';
 }
 
 function renderChatWidget(scope, messages) {
