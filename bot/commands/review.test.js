@@ -18,27 +18,34 @@ test('formatReviewReply shows a genre/category tag field when game context is gi
   assert.match(tagField.value, /シングルプレイヤー/);
 });
 
-test('buildReasoningPrompt includes the game name and review text', () => {
-  const prompt = buildReasoningPrompt('Hollow Knight', ['最高のメトロイドヴァニア']);
+test('buildReasoningPrompt includes the game name and positive/negative review text', () => {
+  const prompt = buildReasoningPrompt('Hollow Knight', { positive: ['最高のメトロイドヴァニア'], negative: ['操作にクセがある'] });
   assert.match(prompt, /Hollow Knight/);
   assert.match(prompt, /最高のメトロイドヴァニア/);
+  assert.match(prompt, /操作にクセがある/);
+  assert.match(prompt, /好評/);
+  assert.match(prompt, /不評/);
+});
+
+test('buildReasoningPrompt handles missing review arrays without throwing', () => {
+  assert.doesNotThrow(() => buildReasoningPrompt('Game', {}));
 });
 
 test('buildReasoningPrompt includes genre/category context when given', () => {
-  const prompt = buildReasoningPrompt('Hollow Knight', ['レビュー'], { genres: ['アクション'], categories: ['シングルプレイヤー'] });
+  const prompt = buildReasoningPrompt('Hollow Knight', { positive: ['レビュー'], negative: [] }, { genres: ['アクション'], categories: ['シングルプレイヤー'] });
   assert.match(prompt, /アクション/);
   assert.match(prompt, /シングルプレイヤー/);
 });
 
 test('buildReasoningPrompt asks about the expanded category list including localization, without a JSON schema', () => {
-  const prompt = buildReasoningPrompt('Hollow Knight', ['レビュー']);
+  const prompt = buildReasoningPrompt('Hollow Knight', { positive: ['レビュー'], negative: [] });
   assert.match(prompt, /日本語対応/);
   assert.match(prompt, /ボリューム/);
   assert.doesNotMatch(prompt, /"verdict"/);
 });
 
 test('buildReasoningPrompt asks the model to research external critic scores via web search', () => {
-  const prompt = buildReasoningPrompt('Hollow Knight', ['レビュー']);
+  const prompt = buildReasoningPrompt('Hollow Knight', { positive: ['レビュー'], negative: [] });
   assert.match(prompt, /Metacritic/);
 });
 

@@ -153,7 +153,7 @@ client.on(Events.InteractionCreate, function (interaction) {
         searchGame: steamLib.searchGame,
         fetchReviewSummary: steamLib.fetchReviewSummary,
         fetchGameContext: steamLib.fetchGameContext,
-        fetchReviews: steamLib.fetchReviewTexts,
+        fetchOpposingReviews: steamLib.fetchOpposingReviews,
         fetchChatReply: chat.fetchChatReply
       });
     },

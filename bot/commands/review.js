@@ -6,14 +6,17 @@ var THINKING_MODEL = require('../chat.js').THINKING_MODEL;
 var VERDICT_EMOJI = { '今すぐ買い': '🔥', '買い': '✅', 'セール待ち': '⏳', '人を選ぶ': '🤔', '見送り': '⛔' };
 
 // 1段階目: JSON制約を課さず自由記述でじっくり考察させる(qwen3-vl-8b-thinkingで実行、Web検索有効)。
-function buildReasoningPrompt(gameName, reviewTexts, gameContext) {
-  var joined = reviewTexts.join('\n---\n').slice(0, 6000);
+// 好評/不評を別々に渡すことで、母数の多い側に判定が引っ張られるのを防ぐ(dashboard分析と同じ方式)。
+function buildReasoningPrompt(gameName, reviewsBySentiment, gameContext) {
+  var positive = (reviewsBySentiment && reviewsBySentiment.positive) || [];
+  var negative = (reviewsBySentiment && reviewsBySentiment.negative) || [];
   var contextLine = '';
   if (gameContext && ((gameContext.genres && gameContext.genres.length) || (gameContext.categories && gameContext.categories.length))) {
     contextLine = 'このゲームは' + (gameContext.genres || []).join('・') + 'に属し、'
       + (gameContext.categories || []).join('・') + 'に対応しています。これを踏まえて判断してください。\n';
   }
-  return 'あなたはSteamゲームレビューの詳細分析AIです。以下は「' + gameName + '」のユーザーレビュー抜粋です。\n'
+  return 'あなたはSteamゲームレビューの詳細分析AIです。以下は「' + gameName + '」の好評レビューと不評レビューの抜粋です。'
+    + '両方を踏まえて公平に判断してください。\n'
     + contextLine
     + 'Web検索でこのゲームの外部評価(Metacritic、OpenCritic、IGN等の実在するレビューサイトのスコアや評)も調べてください。\n'
     + '次の観点を自由な文章でじっくり考察してください。結論を急がず、レビューの具体的な内容を踏まえて書いてください。\n'
@@ -23,7 +26,8 @@ function buildReasoningPrompt(gameName, reviewTexts, gameContext) {
     + '・具体的な良い点、悪い点\n'
     + '・こんな人におすすめ/おすすめできない人\n'
     + '・調べて分かった外部評価\n\n'
-    + 'レビュー:\n' + joined;
+    + '【好評レビュー】\n' + positive.join('\n---\n').slice(0, 4000) + '\n\n'
+    + '【不評レビュー】\n' + negative.join('\n---\n').slice(0, 4000);
 }
 
 // 2段階目: 1段階目の考察文を、既存の表示に使うJSON形式へ機械的に変換するだけの軽い呼び出し(webSearch不要)。
@@ -141,8 +145,8 @@ async function handleReviewCommand(interaction, deps) {
     reviewSummary = await deps.fetchReviewSummary(found.id);
     gameContext = await deps.fetchGameContext(found.id);
     if (apiKey) {
-      var reviews = await deps.fetchReviews(found.id, 30);
-      if (reviews.length) {
+      var reviews = await deps.fetchOpposingReviews(found.id, 15);
+      if (reviews.positive.length || reviews.negative.length) {
         failureReason = 'parse_failed';
         try {
           var reasoningPrompt = buildReasoningPrompt(found.name, reviews, gameContext);
