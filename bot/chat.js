@@ -5,6 +5,8 @@ var fetchWithTimeout = require('./lib/fetchWithTimeout.js').fetchWithTimeout;
 
 // AI応答はWeb検索や推論を伴い数十秒かかることがあるため、Steam API向けの短いデフォルトより長めに取る。
 var AI_FETCH_TIMEOUT_MS = 45000;
+// Web検索(webSearch:true)はさらに時間がかかり45秒では打ち切られることがあるため、その場合だけ長めに取る。
+var AI_FETCH_TIMEOUT_MS_SEARCH = 90000;
 
 var MAX_HISTORY = 6;
 
@@ -88,7 +90,7 @@ async function fetchChatReply(prompt, apiKey, options) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'API-KEY': apiKey },
     body: JSON.stringify(body)
-  }, AI_FETCH_TIMEOUT_MS);
+  }, webSearch ? AI_FETCH_TIMEOUT_MS_SEARCH : AI_FETCH_TIMEOUT_MS);
   var d = await r.json();
   if (!r.ok || d.errorCode) throw new Error(d.message || String(r.status));
   var text = (d.aiRecord && d.aiRecord.aiRecordDetail && d.aiRecord.aiRecordDetail.resultObject && d.aiRecord.aiRecordDetail.resultObject[0]) || '';
@@ -108,7 +110,17 @@ async function handleChatMessage(message, historyStore, apiKey, options) {
     message.channel.sendTyping().catch(function () {});
   }, 8000);
   try {
-    var reply = await fetchChatReply(prompt, apiKey, options);
+    var reply;
+    try {
+      reply = await fetchChatReply(prompt, apiKey, options);
+    } catch (searchErr) {
+      // Web検索応答がタイムアウトした場合、検索なしで1回だけ再試行して何らかの返答は返す。
+      if (options && options.webSearch && searchErr.name === 'AbortError') {
+        reply = await fetchChatReply(prompt, apiKey, Object.assign({}, options, { webSearch: false }));
+      } else {
+        throw searchErr;
+      }
+    }
     var replyText = (reply || 'うまく返答を生成できなかった…').slice(0, 2000);
     var embeds = [];
     if (options && options.searchGame && options.fetchPriceDetail) {
