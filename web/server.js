@@ -123,7 +123,7 @@ app.get('/roulette/recommend', function (req, res) {
 });
 
 var BACKLOG_MAX_MINUTES = 120;
-var BACKLOG_MAX_CANDIDATES = 12;
+var BACKLOG_MAX_CANDIDATES = 20;
 
 app.post('/api/roulette/backlog/spin', async function (req, res) {
   try {
@@ -149,43 +149,25 @@ app.post('/api/roulette/backlog/spin', async function (req, res) {
   }
 });
 
-var RECOMMEND_MAX_CANDIDATES = 10;
-var RECOMMEND_MIN_REVIEWS = 3;
+var RECOMMEND_MAX_CANDIDATES = 16;
 
 app.post('/api/roulette/recommend/spin', async function (req, res) {
   try {
     var pool = await recommendGames.fetchFeaturedPool();
     var shuffledPool = recommendGames.pickRandomGames(pool, pool.length);
-    var realGames = await gamePool.pickRealGames(shuffledPool, RECOMMEND_MAX_CANDIDATES, steamLib.isRealGame, 25);
+    var realGames = await gamePool.pickRealGames(shuffledPool, RECOMMEND_MAX_CANDIDATES, steamLib.isRealGame, 35);
     if (!realGames.length) {
       res.json({ error: 'no_candidates' });
       return;
     }
+    // レビュー有無で当選を偏らせると、新作寄りの候補プールでは常に同じ1〜2枠にしか
+    // 当たらなくなる(実機確認済み)。ルーレットは「回す楽しさ」を優先し均等ランダムにする。
+    // 画像はfetchFeaturedPoolが既に返す実在確認済みのcapsule画像を優先する
+    // (header.jpgを自前構築すると、無名の新作タイトルでは404になることが多い、実機確認済み)。
     var candidates = realGames.map(function (g) {
-      return { id: g.id, name: g.name, imageUrl: steamLib.headerImageUrl(g.id) };
+      return { id: g.id, name: g.name, imageUrl: g.image || steamLib.headerImageUrl(g.id) };
     });
-
-    // レビューが3件以上ある候補のインデックスだけを集め、その部分集合の中から当選を選ぶ
-    // (せっかく回して当たったゲームがAI分析なしの価格だけカードだと寂しいため)。
-    // 該当が1件も無ければ候補全体から均等ランダムで選ぶ。
-    var reviewedIndexes = [];
-    for (var i = 0; i < candidates.length; i++) {
-      try {
-        var reviews = await steamLib.fetchReviewTexts(candidates[i].id, RECOMMEND_MIN_REVIEWS);
-        if (reviews.length >= RECOMMEND_MIN_REVIEWS) reviewedIndexes.push(i);
-      } catch (e) {
-        // このゲームはレビュー取得に失敗しただけで、候補からは外れるだけ。全体は失敗させない。
-      }
-    }
-
-    var winnerIndex;
-    if (reviewedIndexes.length) {
-      var pickedAmongReviewed = roulette.pickWinner(reviewedIndexes);
-      winnerIndex = reviewedIndexes[pickedAmongReviewed];
-    } else {
-      winnerIndex = roulette.pickWinner(candidates);
-    }
-
+    var winnerIndex = roulette.pickWinner(candidates);
     res.json(roulette.buildSpinPayload(candidates, winnerIndex));
   } catch (e) {
     console.error('/api/roulette/recommend/spin failed:', e);
