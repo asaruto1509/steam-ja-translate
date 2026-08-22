@@ -1,6 +1,7 @@
 'use strict';
 
 var NO_REVIEWS = { positive: [], negative: [] };
+var MAX_SIMILAR_GAMES = 5;
 
 async function safe(promiseFn, fallback) {
   try {
@@ -24,12 +25,31 @@ async function fetchAnalysis(deps, found, gameContext, reviews, extra) {
   }, null);
 }
 
+async function fetchSimilarGameData(name, deps) {
+  var found = await safe(function () { return deps.searchGame(name); }, null);
+  if (!found) return null;
+  var results = await Promise.all([
+    safe(function () { return deps.fetchPriceDetail(found.id); }, null),
+    safe(function () { return deps.fetchReviewSummary(found.id); }, null),
+    safe(function () { return deps.fetchPlayerCount(found.id); }, null)
+  ]);
+  return { name: found.name, appid: found.id, priceDetail: results[0], reviewSummary: results[1], playerCount: results[2] };
+}
+
+async function fetchSimilarGamesData(names, deps) {
+  if (!Array.isArray(names) || !names.length) return [];
+  var settled = await Promise.all(
+    names.slice(0, MAX_SIMILAR_GAMES).map(function (name) { return fetchSimilarGameData(name, deps); })
+  );
+  return settled.filter(function (g) { return g !== null; });
+}
+
 async function fetchGameAnalysis(name, deps) {
   var found = await deps.searchGame(name);
   if (!found) {
     return {
       found: null, priceDetail: null, reviewSummary: null, gameContext: null,
-      playerCount: null, achievementStats: null, analysis: null
+      playerCount: null, achievementStats: null, priceHistory: [], similarGamesData: [], analysis: null
     };
   }
 
@@ -39,7 +59,8 @@ async function fetchGameAnalysis(name, deps) {
     safe(function () { return deps.fetchGameContext(found.id); }, null),
     safe(function () { return deps.fetchPlayerCount(found.id); }, null),
     safe(function () { return deps.fetchAchievementStats(found.id); }, null),
-    deps.apiKey ? safe(function () { return deps.fetchOpposingReviews(found.id, 10); }, NO_REVIEWS) : Promise.resolve(NO_REVIEWS)
+    deps.apiKey ? safe(function () { return deps.fetchOpposingReviews(found.id, 10); }, NO_REVIEWS) : Promise.resolve(NO_REVIEWS),
+    deps.itadApiKey ? safe(function () { return deps.fetchPriceHistory(found.id, deps.itadApiKey); }, []) : Promise.resolve([])
   ]);
   var priceDetail = results[0];
   var reviewSummary = results[1];
@@ -47,12 +68,15 @@ async function fetchGameAnalysis(name, deps) {
   var playerCount = results[3];
   var achievementStats = results[4];
   var reviews = results[5];
+  var priceHistory = results[6];
 
   var analysis = await fetchAnalysis(deps, found, gameContext, reviews, { playerCount: playerCount, achievementStats: achievementStats });
+  var similarGamesData = analysis ? await fetchSimilarGamesData(analysis.similarGames, deps) : [];
 
   return {
     found: found, priceDetail: priceDetail, reviewSummary: reviewSummary, gameContext: gameContext,
-    playerCount: playerCount, achievementStats: achievementStats, analysis: analysis
+    playerCount: playerCount, achievementStats: achievementStats, priceHistory: priceHistory,
+    similarGamesData: similarGamesData, analysis: analysis
   };
 }
 
