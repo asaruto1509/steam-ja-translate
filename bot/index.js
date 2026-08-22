@@ -167,6 +167,7 @@ client.on(Events.InteractionCreate, function (interaction) {
         pickRealGames: gamePool.pickRealGames,
         isRealGame: steamLib.isRealGame,
         fetchReviews: steamLib.fetchReviewTexts,
+        pickAnalyzableGames: recommendGames.pickAnalyzableGames,
         fetchGameAnalysis: recommendGames.fetchGameAnalysis,
         buildHeaderEmbed: recommendGames.buildHeaderEmbed,
         buildRecommendEmbeds: recommendGames.buildRecommendEmbeds
