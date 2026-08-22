@@ -25,7 +25,7 @@ test('renderLayout includes a loading overlay explaining the wait time', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /loading-overlay/);
   assert.match(page, /分析中/);
-  assert.match(page, /45秒/);
+  assert.match(page, /分程度/);
 });
 
 test('renderLayout includes a script that shows the loading overlay on form submit', () => {
@@ -33,6 +33,13 @@ test('renderLayout includes a script that shows the loading overlay on form subm
   assert.match(page, /querySelectorAll\("form"\)/);
   assert.match(page, /addEventListener\("submit"/);
   assert.match(page, /classList\.add\("loading"\)/);
+});
+
+test('renderLayout includes a search suggestions dropdown wired to the search input', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /id="search-input"/);
+  assert.match(page, /id="suggestions-list"/);
+  assert.match(page, /\/api\/search-suggestions\?q=/);
 });
 
 test('renderLayout keeps the header image responsive on narrow screens', () => {

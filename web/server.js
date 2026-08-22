@@ -7,6 +7,7 @@ var viewModel = require('./lib/viewModel.js');
 var gameAnalysis = require('./lib/gameAnalysis.js');
 var priceHistoryApi = require('./lib/priceHistoryApi.js');
 var localHistoryApi = require('./lib/localHistoryApi.js');
+var searchSuggestions = require('./lib/searchSuggestions.js');
 var steamLib = require('../bot/lib/steam.js');
 var chatLib = require('../bot/chat.js');
 var reviewLib = require('../bot/commands/review.js');
@@ -33,6 +34,23 @@ app.use(express.urlencoded({ extended: false }));
 app.get('/', function (req, res) {
   var body = topPage.renderTopPage({ history: store.getHistory(), favorites: store.getFavorites() });
   res.send(layout.renderLayout(body, {}));
+});
+
+app.get('/api/search-suggestions', async function (req, res) {
+  var rawQuery = req.query.q;
+  var query = typeof rawQuery === 'string' ? rawQuery : '';
+  try {
+    var suggestions = await searchSuggestions.fetchSuggestions(query, {
+      searchGameChoices: steamLib.searchGameChoices,
+      searchGame: steamLib.searchGame,
+      fetchChatReply: chatLib.fetchChatReply,
+      apiKey: process.env.ONEMIN_API_KEY
+    });
+    res.json(suggestions);
+  } catch (e) {
+    console.error('/api/search-suggestions failed:', e);
+    res.json([]);
+  }
 });
 
 app.get('/analyze', async function (req, res) {
