@@ -1,5 +1,6 @@
 'use strict';
 const test = require('node:test');
+const { mock } = require('node:test');
 const assert = require('node:assert/strict');
 const { parseHistoryEntries } = require('./priceHistoryApi.js');
 
@@ -28,12 +29,40 @@ test('parseHistoryEntries filters out entries from shops other than Steam (id 61
 });
 
 test('parseHistoryEntries skips malformed entries missing a price', () => {
-  const malformed = [{ timestamp: '2026-07-09T19:28:10+02:00', shop: { id: 61, name: 'Steam' }, deal: {} }];
-  assert.deepEqual(parseHistoryEntries(malformed), []);
+  const warnMock = mock.method(console, 'warn', () => {});
+  try {
+    const malformed = [{ timestamp: '2026-07-09T19:28:10+02:00', shop: { id: 61, name: 'Steam' }, deal: {} }];
+    assert.deepEqual(parseHistoryEntries(malformed), []);
+  } finally {
+    warnMock.mock.restore();
+  }
 });
 
 test('parseHistoryEntries returns an empty array for non-array input', () => {
   assert.deepEqual(parseHistoryEntries(null), []);
   assert.deepEqual(parseHistoryEntries(undefined), []);
   assert.deepEqual(parseHistoryEntries('not an array'), []);
+});
+
+test('parseHistoryEntries warns when non-empty input yields no matching entries', () => {
+  const warnMock = mock.method(console, 'warn', () => {});
+  try {
+    const malformed = [{ timestamp: '2026-07-09T19:28:10+02:00', shop: { id: 61, name: 'Steam' }, deal: {} }];
+    assert.deepEqual(parseHistoryEntries(malformed), []);
+    assert.equal(warnMock.mock.callCount(), 1);
+  } finally {
+    warnMock.mock.restore();
+  }
+});
+
+test('parseHistoryEntries does not warn for legitimately empty input', () => {
+  const warnMock = mock.method(console, 'warn', () => {});
+  try {
+    parseHistoryEntries([]);
+    parseHistoryEntries(null);
+    parseHistoryEntries(undefined);
+    assert.equal(warnMock.mock.callCount(), 0);
+  } finally {
+    warnMock.mock.restore();
+  }
 });
