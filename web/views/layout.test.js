@@ -313,6 +313,31 @@ test('renderLayout keeps the coin resting visibly in the slot at idle, instead o
   assert.match(page, /@keyframes rouletteCoinIdleBob/);
 });
 
+test('renderLayout lets the player drag the lever knob down to start a spin, as an alternative to the button', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /touch-action:none;cursor:grab/);
+  assert.match(page, /function startSpin\(skipLeverAnim\)\{/);
+  assert.match(page, /spinBtn\.addEventListener\("click",function\(\)\{startSpin\(false\);\}\);/);
+  assert.match(page, /var LEVER_DRAG_MAX=200/);
+  assert.match(page, /var LEVER_DRAG_THRESHOLD=130/);
+  assert.match(page, /lever\.addEventListener\("pointerdown",function\(e\)\{/);
+  assert.match(page, /lever\.addEventListener\("pointermove",function\(e\)\{/);
+  assert.match(page, /lever\.addEventListener\("pointerup",leverDragEnd\)/);
+  assert.match(page, /lever\.addEventListener\("pointercancel",function\(\)\{/);
+  // dragging past the threshold on release must start a spin; short drags must not
+  assert.match(page, /if\(delta>=LEVER_DRAG_THRESHOLD&&!spinning\)\{startSpin\(true\);\}/);
+  // a spin already in progress must block starting a new drag
+  const pointerdownBody = page.slice(page.indexOf('lever.addEventListener("pointerdown"'), page.indexOf('lever.addEventListener("pointermove"'));
+  assert.match(pointerdownBody, /if\(spinning\)return;/);
+});
+
+test('renderLayout skips the automatic lever-pull CSS animation when the spin was already started by dragging the lever itself', () => {
+  const page = renderLayout('<p>x</p>', {});
+  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim){'), page.indexOf('spinBtn.addEventListener("click"'));
+  assert.match(startSpinBody, /if\(skipLeverAnim\)\{playLeverSound\(\);\}/);
+  assert.match(startSpinBody, /else\{setTimeout\(function\(\)\{/);
+});
+
 test('renderLayout tracks a hit streak (resetting on a miss) and can grant a free-spin bonus that skips the spin cost', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /var hitStreak=0/);
