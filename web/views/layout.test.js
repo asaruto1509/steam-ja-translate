@@ -428,7 +428,7 @@ test('renderLayout tracks stats (spins, wins, streak, jackpots, doubleup, free-s
   assert.match(page, /bumpStat\("doubleupLosses",1\);/);
   assert.match(page, /bumpStat\("freeSpinBonuses",1\);/);
   const shopBlock = page.slice(shopBlockIndex);
-  assert.equal((shopBlock.match(/bumpStat\("shopPurchases",1\);/g) || []).length, 4, 'all shop purchase paths (free spins, payout boost, theme unlock, soundpack unlock) must count toward the achievement');
+  assert.equal((shopBlock.match(/bumpStat\("shopPurchases",1\);/g) || []).length, 6, 'all shop purchase paths (free spins, payout boost, theme, soundpack, coin skin, lever skin) must count toward the achievement');
 });
 
 test('renderLayout wires up the shop page: free-spin purchase, a capped/escalating payout-boost, and theme unlocks, all spending the shared credits balance', () => {
@@ -529,6 +529,18 @@ test('renderLayout scales the lever-pull strength (0.6-1.4) by how far the knob 
   assert.match(page, /overlayRainCount=Math\.round\(overlayRainCount\*spinEffectStrength\);/);
 });
 
+test('renderLayout lets a shop-purchased coin skin swap the coin image used by the insert coin, payout rain, and idle coin, and a lever skin add a CSS class to the lever', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var COIN_SKIN_CODES=\{default:"1fa99",gold:"1f947",gem:"1f48e"\};/);
+  assert.match(page, /var COINSKIN_KEY="ja_trans_shop_coinskin_v1";/);
+  assert.match(page, /if\(coin&&activeCoinSkin!=="default"\)\{coin\.setAttribute\("src",coinSkinUrl\(activeCoinSkin\)\);\}/);
+  assert.match(page, /var coinImgUrl=coin\?coin\.getAttribute\("src"\):"";/);
+  assert.match(page, /var LEVERSKIN_KEY="ja_trans_shop_leverskin_v1";/);
+  assert.match(page, /if\(lever&&activeLeverSkin!=="default"\)\{lever\.classList\.add\("knob-"\+activeLeverSkin\);\}/);
+  assert.match(page, /\.roulette-lever\.knob-blue \.roulette-lever-knob\{/);
+  assert.match(page, /\.roulette-lever\.knob-black \.roulette-lever-knob\{/);
+});
+
 test('renderLayout wires up the shop soundpack and shake-intensity controls, with soundpack unlocks counting toward the shop-purchase achievement', () => {
   const page = renderLayout('<p>x</p>', {});
   const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');
@@ -538,4 +550,16 @@ test('renderLayout wires up the shop soundpack and shake-intensity controls, wit
   assert.match(shopBlock, /function renderShakeItem\(\)\{/);
   assert.match(shopBlock, /saveActiveSoundPack\(id\);/);
   assert.match(shopBlock, /saveShakeIntensity\(v\);/);
+});
+
+test('renderLayout wires up the shop coin-skin and lever-skin controls with escalating unlock costs', () => {
+  const page = renderLayout('<p>x</p>', {});
+  const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');
+  const shopBlock = page.slice(shopBlockStart);
+  assert.match(shopBlock, /var COINSKIN_COST=300;/);
+  assert.match(shopBlock, /var LEVERSKIN_COST=300;/);
+  assert.match(shopBlock, /function renderCoinSkinItem\(\)\{/);
+  assert.match(shopBlock, /function renderLeverSkinItem\(\)\{/);
+  assert.match(shopBlock, /saveActiveCoinSkin\(id\);/);
+  assert.match(shopBlock, /saveActiveLeverSkin\(id\);/);
 });

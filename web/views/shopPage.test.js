@@ -21,6 +21,18 @@ test('renderShopPage includes the free-spins, payout-boost, and theme shop items
   assert.match(html, /id="shop-theme-purple"/);
 });
 
+test('renderShopPage includes coin-skin and lever-skin cosmetic items', () => {
+  const html = renderShopPage();
+  assert.match(html, /data-item="coinskin"/);
+  assert.match(html, /id="shop-coinskin-default"/);
+  assert.match(html, /id="shop-coinskin-gold"/);
+  assert.match(html, /id="shop-coinskin-gem"/);
+  assert.match(html, /data-item="leverskin"/);
+  assert.match(html, /id="shop-leverskin-default"/);
+  assert.match(html, /id="shop-leverskin-blue"/);
+  assert.match(html, /id="shop-leverskin-black"/);
+});
+
 test('renderShopPage includes soundpack and shake-intensity items', () => {
   const html = renderShopPage();
   assert.match(html, /data-item="soundpack"/);
