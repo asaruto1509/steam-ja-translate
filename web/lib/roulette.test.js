@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { pickWinner, buildSpinPayload } = require('./roulette.js');
+const { pickWinner, buildSpinPayload, excludeRecentlyShown } = require('./roulette.js');
 
 test('pickWinner returns an index within range using the injected rng', () => {
   const candidates = [{ id: '1' }, { id: '2' }, { id: '3' }];
@@ -45,4 +45,22 @@ test('buildSpinPayload works with a winnerIndex of 0', () => {
     candidates: [{ id: '1', name: 'A', imageUrl: 'u' }],
     winnerIndex: 0
   });
+});
+
+test('excludeRecentlyShown filters out ids from the recent list', () => {
+  const pool = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }];
+  const result = excludeRecentlyShown(pool, ['2', '4'], 1);
+  assert.deepEqual(result.map((g) => g.id), ['1', '3']);
+});
+
+test('excludeRecentlyShown falls back to the full pool when exclusion leaves too few', () => {
+  const pool = [{ id: '1' }, { id: '2' }, { id: '3' }];
+  const result = excludeRecentlyShown(pool, ['1', '2', '3'], 2);
+  assert.deepEqual(result.map((g) => g.id), ['1', '2', '3']);
+});
+
+test('excludeRecentlyShown returns the full pool when nothing is recent', () => {
+  const pool = [{ id: '1' }, { id: '2' }];
+  const result = excludeRecentlyShown(pool, [], 1);
+  assert.deepEqual(result.map((g) => g.id), ['1', '2']);
 });

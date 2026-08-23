@@ -22,6 +22,7 @@ var backlogPool = require('./lib/backlogPool.js');
 var roulettePage = require('./views/roulettePage.js');
 var recommendGames = require('../scripts/recommend-games.js');
 var gamePool = require('../bot/lib/gamePool.js');
+var recommendPool = require('./lib/recommendPool.js');
 
 var PORT = process.env.PORT || 3000;
 var HOST = process.env.BIND_HOST || '127.0.0.1';
@@ -150,23 +151,31 @@ app.post('/api/roulette/backlog/spin', async function (req, res) {
 });
 
 var RECOMMEND_MAX_CANDIDATES = 16;
+// 直前のスピンで表示した候補のid。次のスピンではまずここに無いものだけからプールする
+// (同じ顔ぶれが連続で出て「ランダム性が低い」と感じられる問題への対策、実機確認済み)。
+var recentRecommendIds = [];
 
 app.post('/api/roulette/recommend/spin', async function (req, res) {
   try {
-    var pool = await recommendGames.fetchFeaturedPool();
-    var shuffledPool = recommendGames.pickRandomGames(pool, pool.length);
-    var realGames = await gamePool.pickRealGames(shuffledPool, RECOMMEND_MAX_CANDIDATES, steamLib.isRealGame, 35);
+    // scripts/recommend-games.jsのfetchFeaturedPool(top_sellers+new_releasesのみ、
+    // 実測30件台)はルーレットの表示件数(16件)に対してプールが小さすぎ、回すたびに
+    // ほぼ同じ顔ぶれになる(実機確認済み)。specialsも合わせて取り込み拡張したプールを使う。
+    var pool = await recommendPool.fetchExpandedPool();
+    var usablePool = roulette.excludeRecentlyShown(pool, recentRecommendIds, RECOMMEND_MAX_CANDIDATES);
+    var shuffledPool = recommendGames.pickRandomGames(usablePool, usablePool.length);
+    var realGames = await gamePool.pickRealGames(shuffledPool, RECOMMEND_MAX_CANDIDATES, steamLib.isRealGame, 45);
     if (!realGames.length) {
       res.json({ error: 'no_candidates' });
       return;
     }
     // レビュー有無で当選を偏らせると、新作寄りの候補プールでは常に同じ1〜2枠にしか
     // 当たらなくなる(実機確認済み)。ルーレットは「回す楽しさ」を優先し均等ランダムにする。
-    // 画像はfetchFeaturedPoolが既に返す実在確認済みのcapsule画像を優先する
+    // 画像はfetchExpandedPoolが既に返す実在確認済みのcapsule画像を優先する
     // (header.jpgを自前構築すると、無名の新作タイトルでは404になることが多い、実機確認済み)。
     var candidates = realGames.map(function (g) {
       return { id: g.id, name: g.name, imageUrl: g.image || steamLib.headerImageUrl(g.id) };
     });
+    recentRecommendIds = candidates.map(function (c) { return c.id; });
     var winnerIndex = roulette.pickWinner(candidates);
     res.json(roulette.buildSpinPayload(candidates, winnerIndex));
   } catch (e) {

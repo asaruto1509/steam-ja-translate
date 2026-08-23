@@ -22,6 +22,12 @@ test('renderRoulettePage includes a reel container, marker, spin button, and res
   assert.match(html, /id="roulette-error"/);
 });
 
+test('renderRoulettePage includes a decorative lever handle beside the reel', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /class="roulette-lever"/);
+  assert.match(html, /class="roulette-lever-knob"/);
+});
+
 test('renderRoulettePage escapes the title', () => {
   const html = renderRoulettePage({ title: '<script>alert(1)</script>', spinEndpoint: '/api/y' });
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);

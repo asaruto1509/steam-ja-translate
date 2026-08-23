@@ -102,3 +102,11 @@ test('renderLayout adds the pulled class before disabling the spin button, so th
   assert.ok(disabledIndex > -1, 'expected to find spinBtn.disabled=true');
   assert.ok(pulledIndex < disabledIndex, 'pulled class must be added before the button is disabled');
 });
+
+test('renderLayout includes a decorative slot-machine lever styled and animated alongside the reel', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-lever\{/);
+  assert.match(page, /\.roulette-lever-knob\{/);
+  assert.match(page, /@keyframes rouletteLeverKnobPull/);
+  assert.match(page, /lever\.classList\.add\("pulled"\)/);
+});
