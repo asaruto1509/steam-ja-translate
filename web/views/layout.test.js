@@ -93,3 +93,12 @@ test('renderLayout wires the roulette spin button to fetch the page-specific spi
   assert.match(page, /roulette-spin-btn/);
   assert.match(page, /data-spin-endpoint/);
 });
+
+test('renderLayout adds the pulled class before disabling the spin button, so the lever-pull animation is not suppressed by the disabled attribute', () => {
+  const page = renderLayout('<p>x</p>', {});
+  const pulledIndex = page.indexOf('spinBtn.classList.add("pulled")');
+  const disabledIndex = page.indexOf('spinBtn.disabled=true');
+  assert.ok(pulledIndex > -1, 'expected to find classList.add("pulled")');
+  assert.ok(disabledIndex > -1, 'expected to find spinBtn.disabled=true');
+  assert.ok(pulledIndex < disabledIndex, 'pulled class must be added before the button is disabled');
+});
