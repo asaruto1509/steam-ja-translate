@@ -185,13 +185,12 @@ test('renderLayout gives a miss its own effect: machine shake and a dim flash', 
   assert.match(page, /missDimEl\.classList\.add\("flash"\)/);
 });
 
-test('renderLayout includes a persistent credit/bet HUD backed by localStorage, deducting on spin and paying out on a win', () => {
+test('renderLayout includes a persistent credit/bet HUD backed by localStorage, deducting on spin and paying out via cash-out', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /\.roulette-hud\{/);
   assert.match(page, /CREDITS_KEY="ja_trans_roulette_credits_v1"/);
-  assert.match(page, /var SPIN_COST=10/);
   assert.match(page, /setCredits\(credits-SPIN_COST\)/);
-  assert.match(page, /setCredits\(credits\+payout\)/);
+  assert.match(page, /setCredits\(credits\+pendingPayout\)/);
   assert.match(page, /function animateNumber\(/);
   assert.match(page, /roulette-payout-amount/);
   assert.match(page, /if\(stored===null\)return 1000/);
@@ -209,4 +208,72 @@ test('renderLayout triggers a reach effect when the first two reels already matc
   assert.match(page, /\.roulette-reel-wrap\.reaching\{/);
   assert.match(page, /if\(i===1&&reelIndexes\[0\]===reelIndexes\[1\]\)\{showReach\(\);\}/);
   assert.match(page, /hideReach\(\);onAllLanded/);
+});
+
+test('renderLayout charges 15 credits per spin, refunding it (or a spent free spin) if the API call fails', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var SPIN_COST=15/);
+  assert.match(page, /var lastSpinUsedFreeSpin=false/);
+  assert.match(page, /lastSpinUsedFreeSpin=freeSpinsRemaining>0/);
+  const spendIndex = page.indexOf('else{setCredits(credits-SPIN_COST);}');
+  const refundIndex = page.indexOf('else{setCredits(credits+SPIN_COST);}');
+  assert.ok(spendIndex > -1, 'must deduct SPIN_COST on a normal (non-free) spin');
+  assert.ok(refundIndex > -1, 'must refund SPIN_COST on a failed spin');
+});
+
+test('renderLayout grows a progressive jackpot every spin and can pay it out on a rare mega-jackpot hit', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var JACKPOT_KEY="ja_trans_roulette_jackpot_v1"/);
+  assert.match(page, /var JACKPOT_BASE=500/);
+  assert.match(page, /var JACKPOT_INCREMENT=5/);
+  assert.match(page, /setJackpot\(jackpot\+JACKPOT_INCREMENT\)/);
+  assert.match(page, /var megaJackpotHit=Math\.random\(\)<0\.08/);
+  assert.match(page, /jackpotWon=jackpot;setJackpot\(JACKPOT_BASE\)/);
+  assert.match(page, /roulette-mega-jackpot-banner/);
+  assert.match(page, /MEGA JACKPOT/);
+});
+
+test('renderLayout offers a double-up gamble after a win before crediting the payout, forfeiting it on a loss', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /roulette-doubleup-red/);
+  assert.match(page, /roulette-doubleup-black/);
+  assert.match(page, /roulette-doubleup-cashout/);
+  assert.match(page, /function tryDouble\(guess\)/);
+  assert.match(page, /pendingPayout\*=2/);
+  assert.match(page, /賞金没収/);
+  // the payout must NOT be credited immediately on a win - only via cashOut() or a doubled win
+  const winBranchStart = page.indexOf('if(hit){');
+  const doubleupStart = page.indexOf('var doubleupDiv=document.createElement');
+  const immediateCreditIndex = page.indexOf('setCredits(credits+payout)');
+  assert.ok(winBranchStart > -1 && doubleupStart > winBranchStart, 'double-up UI must be part of the hit branch');
+  assert.equal(immediateCreditIndex, -1, 'payout must not be auto-credited before the double-up choice');
+});
+
+test('renderLayout does not re-enable the spin button until a pending double-up is resolved', () => {
+  const page = renderLayout('<p>x</p>', {});
+  const hitBranchStart = page.indexOf('if(hit){');
+  const hitBranchEnd = page.indexOf('}else{', hitBranchStart);
+  const hitBranch = page.slice(hitBranchStart, hitBranchEnd);
+  // resetButton() should appear exactly once in the whole hit branch, and only inside
+  // finishDoubleup's body - never unconditionally right after the win visuals are built.
+  const resetCalls = (hitBranch.match(/resetButton\(\);/g) || []).length;
+  assert.equal(resetCalls, 1, 'resetButton must be called exactly once (from finishDoubleup), not unconditionally after a win');
+  assert.match(page, /function finishDoubleup\(\)\{/);
+  const finishBody = page.slice(page.indexOf('function finishDoubleup(){'), page.indexOf('function finishDoubleup(){') + 200);
+  assert.match(finishBody, /resetButton\(\);/);
+  // the win-visuals block (before doubleupDiv is built) must not itself call resetButton
+  const preDoubleupBlock = hitBranch.slice(0, hitBranch.indexOf('var doubleupDiv'));
+  assert.doesNotMatch(preDoubleupBlock, /resetButton\(\);/);
+});
+
+test('renderLayout tracks a hit streak (resetting on a miss) and can grant a free-spin bonus that skips the spin cost', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var hitStreak=0/);
+  assert.match(page, /hitStreak\+\+/);
+  assert.match(page, /hitStreak=0/);
+  assert.match(page, /roulette-streak-banner/);
+  assert.match(page, /var freeSpinsRemaining=0/);
+  assert.match(page, /freeSpinsRemaining\+=3/);
+  assert.match(page, /フリースピンBONUS/);
+  assert.match(page, /if\(lastSpinUsedFreeSpin\)\{freeSpinsRemaining--;updateFreespinIndicator\(\);\}/);
 });

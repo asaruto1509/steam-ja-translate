@@ -49,10 +49,20 @@ test('pickTripleResult always hits when there is only one candidate', () => {
   assert.deepEqual(result, { hit: true, reelIndexes: [0, 0, 0], winnerIndex: 0 });
 });
 
-test('pickTripleResult defaults to Math.random and a 0.75 winRate when not given', () => {
+test('pickTripleResult defaults to Math.random when no rng is given', () => {
   const candidates = [{ id: '1' }];
   const result = pickTripleResult(candidates);
   assert.equal(result.hit, true);
+});
+
+test('pickTripleResult defaults winRate to 0.4 when not given', () => {
+  const candidates = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }];
+  const rng = queueRng([0.5, 0.39]); // hit-roll=0.39 < 0.4 default -> hit
+  const hit = pickTripleResult(candidates, rng);
+  assert.equal(hit.hit, true);
+  const rngMiss = queueRng([0.5, 0.41]); // hit-roll=0.41 >= 0.4 default -> miss
+  const miss = pickTripleResult(candidates, rngMiss);
+  assert.equal(miss.hit, false);
 });
 
 test('excludeRecentlyShown filters out ids from the recent list', () => {

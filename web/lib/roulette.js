@@ -8,7 +8,9 @@
 // 候補が1件しかない場合はハズレを表現しようがないため常に当たり扱いにする。
 function pickTripleResult(candidates, rng, winRate) {
   rng = rng || Math.random;
-  winRate = typeof winRate === 'number' ? winRate : 0.75;
+  // 当初75%だったが、当選のたびに増える払い出しと組み合わせると残高が際限なく増え続け
+  // 「ギャンブル」としての緊張感がなくなる(ユーザー指摘)。40%に引き下げる。
+  winRate = typeof winRate === 'number' ? winRate : 0.4;
   var winnerIndex = Math.floor(rng() * candidates.length);
   var hit = candidates.length <= 1 ? true : rng() < winRate;
   if (hit) {
