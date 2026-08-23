@@ -21,6 +21,7 @@ var roulette = require('./lib/roulette.js');
 var backlogPool = require('./lib/backlogPool.js');
 var roulettePage = require('./views/roulettePage.js');
 var shopPage = require('./views/shopPage.js');
+var incrementalPage = require('./views/incrementalPage.js');
 var recommendGames = require('../scripts/recommend-games.js');
 var gamePool = require('../bot/lib/gamePool.js');
 var recommendPool = require('./lib/recommendPool.js');
@@ -128,8 +129,43 @@ app.get('/shop', function (req, res) {
   res.send(layout.renderLayout(shopPage.renderShopPage({}), {}));
 });
 
+app.get('/incremental', function (req, res) {
+  res.send(layout.renderLayout(incrementalPage.renderIncrementalPage({}), {}));
+});
+
 var BACKLOG_MAX_MINUTES = 120;
 var BACKLOG_MAX_CANDIDATES = 20;
+
+var INCREMENTAL_ROSTER_MAX = 12;
+var INCREMENTAL_ROSTER_MAX_MINUTES = 120;
+var incrementalRosterCache = null;
+var INCREMENTAL_ROSTER_CACHE_TTL_MS = 60 * 60 * 1000;
+
+app.get('/api/incremental/roster', async function (req, res) {
+  try {
+    var now = Date.now();
+    if (incrementalRosterCache && (now - incrementalRosterCache.at) < INCREMENTAL_ROSTER_CACHE_TTL_MS) {
+      res.json({ roster: incrementalRosterCache.roster });
+      return;
+    }
+    var steamId64 = process.env.STEAM_ID64;
+    var apiKey = process.env.STEAM_API_KEY;
+    if (!steamId64 || !apiKey) {
+      res.json({ roster: [] });
+      return;
+    }
+    var owned = await backlogPool.fetchOwnedGames(steamId64, apiKey);
+    var backlog = backlogPool.filterBacklog(owned, INCREMENTAL_ROSTER_MAX_MINUTES);
+    var roster = backlog.slice(0, INCREMENTAL_ROSTER_MAX).map(function (g) {
+      return { id: g.id, name: g.name, imageUrl: g.imageUrl };
+    });
+    incrementalRosterCache = { roster: roster, at: now };
+    res.json({ roster: roster });
+  } catch (e) {
+    console.error('/api/incremental/roster failed:', e);
+    res.status(500).json({ roster: [] });
+  }
+});
 
 app.post('/api/roulette/backlog/spin', async function (req, res) {
   try {
