@@ -586,10 +586,11 @@ test('renderLayout wires a data-reset button that confirms, clears every roulett
   assert.match(shopBlock, /"ja_trans_roulette_betlevel_v1"/);
   assert.match(shopBlock, /"ja_trans_login_bonus_date_v1"/);
   assert.match(shopBlock, /"ja_trans_daily_missions_v1"/);
+  assert.match(shopBlock, /"ja_trans_roulette_multiline_v1"/);
   // guards against silently forgetting to add a key to the array itself as new persisted state is introduced
   const resetKeysLine = shopBlock.slice(shopBlock.indexOf('var RESET_KEYS='), shopBlock.indexOf('var resetBtn='));
   const entryCount = (resetKeysLine.match(/,/g) || []).length + 1;
-  assert.equal(entryCount, resetKeyNames.length + 7, 'RESET_KEYS entry count must include all named *_KEY constants plus the seven inline string keys (jackpot, freespins, bet level, login bonus, daily missions, stats, achievements)');
+  assert.equal(entryCount, resetKeyNames.length + 8, 'RESET_KEYS entry count must include all named *_KEY constants plus the eight inline string keys (jackpot, freespins, bet level, login bonus, daily missions, multiline, stats, achievements)');
 });
 
 test('renderLayout offers a diagonal-line side bet, evaluated client-side from the server-supplied reelIndexes/candidates without the client choosing the outcome', () => {
@@ -606,6 +607,13 @@ test('renderLayout offers a diagonal-line side bet, evaluated client-side from t
   assert.match(page, /var diagonalHit=\(mlTop===mlMid\)&&\(mlMid===mlBot\);/);
   assert.match(page, /\.roulette-reels\{position:relative;/);
   assert.match(page, /\.roulette-reels\.diagonal-hit::after\{/);
+});
+
+test('renderLayout persists the diagonal side-bet checkbox state across reloads', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var MULTILINE_KEY="ja_trans_roulette_multiline_v1";/);
+  assert.match(page, /multilineCheckbox\.checked=localStorage\.getItem\(MULTILINE_KEY\)==="1";/);
+  assert.match(page, /localStorage\.setItem\(MULTILINE_KEY,multilineCheckbox\.checked\?"1":"0"\);/);
 });
 
 test('renderLayout accounts for the multiline side-bet cost in the low-balance warning threshold', () => {
