@@ -293,13 +293,13 @@ test('renderLayout gives a win a full-screen takeover overlay, tiered by payout 
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /\.roulette-win-overlay\{/);
   assert.match(page, /position:fixed;inset:0/);
-  assert.match(page, /function showWinOverlay\(text,rainCount,duration\)\{/);
+  assert.match(page, /function showWinOverlay\(text,rainCount,duration,comboActive\)\{/);
   assert.match(page, /var overlayText=megaJackpotHit\?"💎 MEGA JACKPOT!!":\(payout>=150\?"🎉 BIG WIN!!":"🎉 WIN!!"\)/);
   assert.match(page, /var overlayRainCount=megaJackpotHit\?36:\(payout>=150\?24:14\)/);
   assert.match(page, /var overlayDuration=megaJackpotHit\?3200:\(payout>=150\?2400:1600\)/);
-  assert.match(page, /showWinOverlay\(overlayText,overlayRainCount,overlayDuration\);/);
+  assert.match(page, /showWinOverlay\(overlayText,overlayRainCount,overlayDuration,comboActive\);/);
   // the overlay call must happen before the payout amount is revealed, so it plays as the win lands
-  const overlayCallIndex = page.indexOf('showWinOverlay(overlayText,overlayRainCount,overlayDuration);');
+  const overlayCallIndex = page.indexOf('showWinOverlay(overlayText,overlayRainCount,overlayDuration,comboActive);');
   const payoutElIndex = page.indexOf('resultEl.appendChild(payoutEl);');
   assert.ok(overlayCallIndex > -1 && overlayCallIndex < payoutElIndex, 'overlay must be triggered as part of landing the win, before the result panel is revealed');
 });
@@ -333,7 +333,7 @@ test('renderLayout shows a coin-insert prompt on the spin button when no coin is
   assert.match(page, /function updateSpinBtnLabel\(\)\{/);
   const labelBody = page.slice(page.indexOf('function updateSpinBtnLabel(){'), page.indexOf('function updateSpinBtnLabel(){') + 160);
   assert.match(labelBody, /spinBtn\.textContent=\(freeSpinsRemaining>0\|\|coinInserted\)\?"🎰 回す":"🪙 コインを入れてね";/);
-  assert.match(page, /function resetButton\(\)\{spinning=false;spinBtn\.disabled=false;if\(coin\)\{coin\.classList\.remove\("dropping"\);\}updateSpinBtnLabel\(\);\}/);
+  assert.match(page, /function resetButton\(\)\{spinning=false;spinBtn\.disabled=false;if\(coin\)\{coin\.classList\.remove\("dropping"\);\}updateSpinBtnLabel\(\);updateLowBalanceWarning\(\);\}/);
 });
 
 test('renderLayout lets the player drag the lever knob down to start a spin, as an alternative to the button', () => {
@@ -456,4 +456,48 @@ test('renderLayout tracks a hit streak (resetting on a miss) and can grant a fre
   assert.match(page, /setFreeSpins\(freeSpinsRemaining\+3\);/);
   assert.match(page, /フリースピンBONUS/);
   assert.match(page, /if\(lastSpinUsedFreeSpin\)\{setFreeSpins\(freeSpinsRemaining-1\);\}/);
+});
+
+test('renderLayout picks confetti bursts randomly from multiple emoji patterns', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var CONFETTI_PATTERNS=\[\[.*\],\[.*\],\[.*\],\[.*\]\];/);
+  assert.match(page, /var emojis=CONFETTI_PATTERNS\[Math\.floor\(Math\.random\(\)\*CONFETTI_PATTERNS\.length\)\];/);
+});
+
+test('renderLayout escalates the win overlay into a combo state on a 3+ hit streak', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var comboActive=hitStreak>=3;/);
+  assert.match(page, /if\(hitStreak>=2\)\{overlayText\+=" 🔥COMBO x"\+hitStreak\+"!";\}/);
+  assert.match(page, /showWinOverlay\(overlayText,overlayRainCount,overlayDuration,comboActive\);/);
+  assert.match(page, /winOverlayEl\.classList\.toggle\("combo",!!comboActive\);/);
+  assert.match(page, /\.roulette-win-overlay\.combo /);
+});
+
+test('renderLayout shows a near-miss tease when a losing reel lands adjacent to the winning index', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var nearMiss=false;/);
+  assert.match(page, /if\(idxDiff===1\|\|idxDiff===candidates\.length-1\)\{nearMiss=true;\}/);
+  assert.match(page, /miss\.textContent=nearMiss\?"😲 惜しい!あと1コマだった…":"😢 ハズレ…でもこれはどう\?";/);
+  assert.match(page, /\.roulette-miss-banner\.near-miss\{/);
+});
+
+test('renderLayout renders an always-on ambient particle backdrop on the machine via CSS', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-ambient\{/);
+  assert.match(page, /rouletteAmbientDrift/);
+});
+
+test('renderLayout shows a low-balance warning once credits drop below the spin cost with no free spins or coin queued', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /function updateLowBalanceWarning\(\)\{/);
+  assert.match(page, /var show=freeSpinsRemaining<=0&&!coinInserted&&credits<SPIN_COST;/);
+  assert.match(page, /setCredits\(next\)\{[\s\S]{0,300}updateLowBalanceWarning\(\);\}/);
+  assert.match(page, /function insertCoin\(\)\{[\s\S]{0,250}updateLowBalanceWarning\(\);\}/);
+});
+
+test('renderLayout gives the credits counter a tabular/odometer-style punch animation on update', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-credits\{font-variant-numeric:tabular-nums\}/);
+  assert.match(page, /#roulette-credits-value\.punch\{animation:rouletteCreditsPunch/);
+  assert.match(page, /creditsEl\.classList\.add\("punch"\);/);
 });

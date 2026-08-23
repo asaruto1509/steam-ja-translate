@@ -28,6 +28,7 @@ function renderRoulettePage(opts) {
       + '</div>';
   }).join('');
   return '<section class="roulette-page" data-spin-endpoint="' + spinEndpoint + '">'
+    + '<div class="roulette-ambient" aria-hidden="true"></div>'
     + '<div class="roulette-win-flash" id="roulette-win-flash"></div>'
     + '<div class="roulette-miss-dim" id="roulette-miss-dim"></div>'
     + '<div class="roulette-win-overlay" id="roulette-win-overlay">'
@@ -44,6 +45,7 @@ function renderRoulettePage(opts) {
     + '</div>'
     + '<div class="roulette-streak-banner" id="roulette-streak"></div>'
     + '<div class="roulette-freespin-indicator" id="roulette-freespin-indicator"></div>'
+    + '<div class="roulette-low-balance-warning" id="roulette-low-balance-warning"></div>'
     + '<div class="roulette-reach-banner" id="roulette-reach"></div>'
     + '<div class="roulette-coin-insert">'
     + '<div class="roulette-coin-slot"></div>'

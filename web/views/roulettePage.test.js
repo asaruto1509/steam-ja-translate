@@ -72,6 +72,12 @@ test('renderRoulettePage includes a decorative lever handle beside the reel', ()
   assert.match(html, /class="roulette-lever-knob"/);
 });
 
+test('renderRoulettePage includes an ambient particle backdrop and a low-balance warning element', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /class="roulette-ambient"/);
+  assert.match(html, /id="roulette-low-balance-warning"/);
+});
+
 test('renderRoulettePage escapes the title', () => {
   const html = renderRoulettePage({ title: '<script>alert(1)</script>', spinEndpoint: '/api/y' });
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
