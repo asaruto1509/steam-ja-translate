@@ -22,6 +22,25 @@ test('renderRoulettePage includes three reels, markers, spin button, and result/
   assert.match(html, /id="roulette-error"/);
 });
 
+test('renderRoulettePage includes win-flash and miss-dim overlay elements', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /id="roulette-win-flash"/);
+  assert.match(html, /id="roulette-miss-dim"/);
+});
+
+test('renderRoulettePage includes marquee bulbs around each reel and across the top of the cabinet', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /class="roulette-marquee-top"/);
+  assert.equal((html.match(/class="roulette-bulbs"/g) || []).length, 3);
+  assert.ok((html.match(/class="roulette-bulb"/g) || []).length >= 3 * 6 + 16);
+});
+
+test('renderRoulettePage includes a coin-drop element beside the lever', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /id="roulette-coin"/);
+  assert.match(html, /class="roulette-coin-slot"/);
+});
+
 test('renderRoulettePage includes a reach banner element for the 2-of-3 tension effect', () => {
   const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
   assert.match(html, /id="roulette-reach"/);

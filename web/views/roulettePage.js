@@ -1,23 +1,39 @@
 'use strict';
 var html = require('../lib/html.js');
 
+function bulbsHtml(count, stepMs) {
+  var out = '';
+  for (var i = 0; i < count; i++) {
+    out += '<span class="roulette-bulb" style="animation-delay:' + (i * stepMs) + 'ms"></span>';
+  }
+  return out;
+}
+
 function renderRoulettePage(opts) {
   opts = opts || {};
   var title = html.escapeHtml(opts.title || '');
   var spinEndpoint = html.escapeHtml(opts.spinEndpoint || '');
   var backLinkText = html.escapeHtml(opts.backLinkText || 'トップに戻る');
   var reelsHtml = [0, 1, 2].map(function () {
-    return '<div class="roulette-reel-wrap">'
+    return '<div class="roulette-reel-slot">'
+      + '<div class="roulette-bulbs">' + bulbsHtml(6, 150) + '</div>'
+      + '<div class="roulette-reel-wrap">'
       + '<div class="roulette-reel"></div>'
       + '<div class="roulette-marker"></div>'
+      + '</div>'
       + '</div>';
   }).join('');
   return '<section class="roulette-page" data-spin-endpoint="' + spinEndpoint + '">'
+    + '<div class="roulette-win-flash" id="roulette-win-flash"></div>'
+    + '<div class="roulette-miss-dim" id="roulette-miss-dim"></div>'
+    + '<div class="roulette-marquee-top">' + bulbsHtml(16, 90) + '</div>'
     + '<h2>' + title + '</h2>'
     + '<div class="roulette-reach-banner" id="roulette-reach"></div>'
     + '<div class="roulette-machine">'
     + '<div class="roulette-reels">' + reelsHtml + '</div>'
     + '<div class="roulette-lever" aria-hidden="true">'
+    + '<div class="roulette-coin-slot"></div>'
+    + '<div class="roulette-coin" id="roulette-coin"></div>'
     + '<div class="roulette-lever-track"></div>'
     + '<div class="roulette-lever-knob"></div>'
     + '<div class="roulette-lever-base"></div>'

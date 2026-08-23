@@ -130,6 +130,56 @@ test('renderLayout renders a miss banner when the spin result is not a hit, with
   assert.match(page, /spin\(d\.candidates,d\.hit,d\.reelIndexes\)/);
 });
 
+test('renderLayout drops a coin into the lever slot and plays synthesized sound effects on spin, reel stop, reach, win, and miss', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-coin\{/);
+  assert.match(page, /\.roulette-coin\.dropping\{/);
+  assert.match(page, /coin\.classList\.add\("dropping"\)/);
+  assert.match(page, /function playCoinSound\(\)/);
+  assert.match(page, /function playLeverSound\(\)/);
+  assert.match(page, /function playReelStopSound\(i\)/);
+  assert.match(page, /function playReachSound\(\)/);
+  assert.match(page, /function playWinSound\(\)/);
+  assert.match(page, /function playMissSound\(\)/);
+  assert.match(page, /playCoinSound\(\);/);
+  assert.match(page, /playReelStopSound\(i\);/);
+  assert.match(page, /playReachSound\(\);/);
+  assert.match(page, /playWinSound\(\);/);
+  assert.match(page, /playMissSound\(\);/);
+});
+
+test('renderLayout only starts the AudioContext lazily and resumes it if suspended, to respect browser autoplay policy', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /window\.AudioContext\|\|window\.webkitAudioContext/);
+  assert.match(page, /audioCtx\.state==="suspended"/);
+});
+
+test('renderLayout includes marquee bulb lighting styling that runs continuously around each reel and the top of the cabinet', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-bulb\{/);
+  assert.match(page, /@keyframes rouletteBulbChase/);
+  assert.match(page, /\.roulette-marquee-top\{/);
+});
+
+test('renderLayout gives a hit a bigger celebration: screen flash, coin payout, and a jackpot banner', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-win-flash\{/);
+  assert.match(page, /\.roulette-payout-coin\{/);
+  assert.match(page, /function payoutCoins\(\)/);
+  assert.match(page, /payoutCoins\(\);/);
+  assert.match(page, /roulette-jackpot-banner/);
+  assert.match(page, /JACKPOT/);
+  assert.match(page, /winFlashEl\.classList\.add\("flash"\)/);
+});
+
+test('renderLayout gives a miss its own effect: machine shake and a dim flash', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-machine\.shake\{/);
+  assert.match(page, /\.roulette-miss-dim\{/);
+  assert.match(page, /machine\.classList\.add\("shake"\)/);
+  assert.match(page, /missDimEl\.classList\.add\("flash"\)/);
+});
+
 test('renderLayout triggers a reach effect when the first two reels already match, and clears it once all reels land', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /\.roulette-reach-banner\{/);
