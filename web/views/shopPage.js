@@ -36,6 +36,9 @@ function renderShopPage(opts) {
     + '</div>'
     + '</div>'
     + '</div>'
+    + '<h2>📊 統計・実績</h2>'
+    + '<div class="stats-summary" id="stats-summary"></div>'
+    + '<div class="achievements-grid" id="achievements-grid"></div>'
     + '<p><a href="/">' + backLinkText + '</a></p>'
     + '</section>';
 }

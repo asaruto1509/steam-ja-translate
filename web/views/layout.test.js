@@ -390,6 +390,46 @@ test('renderLayout applies a shop-purchased payout boost to the win amount, and 
   assert.match(page, /\.roulette-page\.theme-purple /);
 });
 
+test('renderLayout gives every reel stop a brief brightness-impact punch, independent of hit/miss', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-reel-wrap\.impact\{animation:rouletteReelImpact 0\.25s ease-out\}/);
+  assert.match(page, /@keyframes rouletteReelImpact/);
+  const spinFnStart = page.indexOf('function spin(candidates,hit,reelIndexes){');
+  const spinFnBody = page.slice(spinFnStart, spinFnStart + 500);
+  assert.match(spinFnBody, /playReelStopSound\(i\);/);
+  assert.match(spinFnBody, /impactWrap\.classList\.add\("impact"\);/);
+});
+
+test('renderLayout tracks stats (spins, wins, streak, jackpots, doubleup, free-spin bonuses, shop purchases) and unlocks achievements from them', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var STATS_KEY="ja_trans_stats_v1"/);
+  assert.match(page, /var ACHIEVEMENTS_KEY="ja_trans_achievements_v1"/);
+  assert.match(page, /function bumpStat\(key,delta\)\{/);
+  assert.match(page, /function setStatMax\(key,value\)\{/);
+  assert.match(page, /function checkAchievements\(\)\{/);
+  assert.match(page, /function showAchievementToast\(def\)\{/);
+  assert.match(page, /\.achievement-toast\{/);
+  // achievements infra must be defined once, before both the roulette and shop page blocks, so both can use it
+  const achievementsDefIndex = page.indexOf('function checkAchievements(){');
+  const rouletteBlockIndex = page.indexOf('document.querySelectorAll(".roulette-page")');
+  const shopBlockIndex = page.indexOf('document.querySelectorAll(".shop-page")');
+  assert.ok(achievementsDefIndex > -1 && achievementsDefIndex < rouletteBlockIndex && rouletteBlockIndex < shopBlockIndex,
+    'stats/achievements helpers must be shared, defined before both page-specific script blocks');
+  // spot-check the actual call sites that feed the counters
+  assert.match(page, /spinning=true;bumpStat\("totalSpins",1\);/);
+  assert.match(page, /bumpStat\("totalWins",1\);/);
+  assert.match(page, /setStatMax\("bestStreak",hitStreak\);/);
+  assert.match(page, /if\(megaJackpotHit\)\{bumpStat\("megaJackpots",1\);\}/);
+  assert.match(page, /bumpStat\("totalMisses",1\);/);
+  assert.match(page, /bumpStat\("totalPayout",pendingPayout\);/);
+  assert.match(page, /setStatMax\("bestWin",pendingPayout\);/);
+  assert.match(page, /bumpStat\("doubleupWins",1\);/);
+  assert.match(page, /bumpStat\("doubleupLosses",1\);/);
+  assert.match(page, /bumpStat\("freeSpinBonuses",1\);/);
+  const shopBlock = page.slice(shopBlockIndex);
+  assert.equal((shopBlock.match(/bumpStat\("shopPurchases",1\);/g) || []).length, 3, 'all three shop purchase paths (free spins, payout boost, theme unlock) must count toward the achievement');
+});
+
 test('renderLayout wires up the shop page: free-spin purchase, a capped/escalating payout-boost, and theme unlocks, all spending the shared credits balance', () => {
   const page = renderLayout('<p>x</p>', {});
   const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');

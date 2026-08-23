@@ -21,6 +21,12 @@ test('renderShopPage includes the free-spins, payout-boost, and theme shop items
   assert.match(html, /id="shop-theme-purple"/);
 });
 
+test('renderShopPage includes a stats summary and achievements grid', () => {
+  const html = renderShopPage();
+  assert.match(html, /id="stats-summary"/);
+  assert.match(html, /id="achievements-grid"/);
+});
+
 test('renderShopPage uses a default back-link text when not provided', () => {
   const html = renderShopPage();
   assert.match(html, /トップに戻る/);
