@@ -60,7 +60,8 @@ test('renderIncrementalPage computes per-tier output and total output scaled by 
   assert.match(html, /function totalOutputPerSec\(\)\{/);
   assert.match(html, /sum\*prestigeMult;/);
   assert.match(html, /setInterval\(function\(\)\{/);
-  assert.match(html, /addDp\(totalOutputPerSec\(\)\);/);
+  assert.match(html, /var d=Math\.max\(0,Math\.min\(OFFLINE_CAP_SECONDS,\(now-lastTick\)\/1000\)\);/);
+  assert.match(html, /addDp\(totalOutputPerSec\(\)\*d\);/);
 });
 
 test('renderIncrementalPage grants capped offline progress based on elapsed time since lastTick, and shows a welcome-back message', () => {
@@ -126,4 +127,18 @@ test('renderIncrementalPage lets the player prestige-reset dp/owned for a perman
   assert.match(html, /prestigeMult=1\+PRESTIGE_COEF\*Math\.sqrt\(lifetimeDp\/PRESTIGE_DIVISOR\);/);
   // 累計DP(lifetimeDp)自体はプレステージでリセットしない(倍率計算の根拠として残す)
   assert.doesNotMatch(html, /lifetimeDp=0;/);
+});
+
+test('renderIncrementalPage loadNumber falls back correctly for a missing localStorage key', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function loadNumber\(key,fallback\)\{/);
+  assert.match(html, /var stored=localStorage\.getItem\(key\);/);
+  assert.match(html, /if\(stored===null\)return fallback;/);
+  assert.match(html, /var raw=Number\(stored\);/);
+});
+
+test('renderIncrementalPage includes a self-contained style block styling the incremental page', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /<style>[\s\S]*<\/style>/);
+  assert.match(html, /\.incremental-tier\{/);
 });
