@@ -1,6 +1,10 @@
 'use strict';
 var html = require('../lib/html.js');
 
+// コイン画像: Twemojiの🪙(U+1FA99)SVG。CC-BY 4.0、jsdelivr経由でホットリンク。
+// https://github.com/jdecked/twemoji
+var COIN_IMG_URL = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/1fa99.svg';
+
 function bulbsHtml(count, stepMs) {
   var out = '';
   for (var i = 0; i < count; i++) {
@@ -29,11 +33,13 @@ function renderRoulettePage(opts) {
     + '<div class="roulette-marquee-top">' + bulbsHtml(16, 90) + '</div>'
     + '<h2>' + title + '</h2>'
     + '<div class="roulette-reach-banner" id="roulette-reach"></div>'
+    + '<div class="roulette-coin-insert">'
+    + '<div class="roulette-coin-slot"></div>'
+    + '<img class="roulette-coin" id="roulette-coin" src="' + COIN_IMG_URL + '" alt="" aria-hidden="true">'
+    + '</div>'
     + '<div class="roulette-machine">'
     + '<div class="roulette-reels">' + reelsHtml + '</div>'
     + '<div class="roulette-lever" aria-hidden="true">'
-    + '<div class="roulette-coin-slot"></div>'
-    + '<div class="roulette-coin" id="roulette-coin"></div>'
     + '<div class="roulette-lever-track"></div>'
     + '<div class="roulette-lever-knob"></div>'
     + '<div class="roulette-lever-base"></div>'

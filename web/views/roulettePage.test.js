@@ -35,10 +35,12 @@ test('renderRoulettePage includes marquee bulbs around each reel and across the 
   assert.ok((html.match(/class="roulette-bulb"/g) || []).length >= 3 * 6 + 16);
 });
 
-test('renderRoulettePage includes a coin-drop element beside the lever', () => {
+test('renderRoulettePage includes a prominent coin-insert element above the machine, using a real coin image', () => {
   const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /class="roulette-coin-insert"/);
   assert.match(html, /id="roulette-coin"/);
   assert.match(html, /class="roulette-coin-slot"/);
+  assert.match(html, /<img class="roulette-coin"[^>]*src="https:\/\/cdn\.jsdelivr\.net\/gh\/jdecked\/twemoji/);
 });
 
 test('renderRoulettePage includes a reach banner element for the 2-of-3 tension effect', () => {

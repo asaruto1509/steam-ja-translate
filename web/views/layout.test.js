@@ -130,11 +130,16 @@ test('renderLayout renders a miss banner when the spin result is not a hit, with
   assert.match(page, /spin\(d\.candidates,d\.hit,d\.reelIndexes\)/);
 });
 
-test('renderLayout drops a coin into the lever slot and plays synthesized sound effects on spin, reel stop, reach, win, and miss', () => {
+test('renderLayout drops a coin into the slot before the lever pulls, and plays synthesized sound effects on spin, reel stop, reach, win, and miss', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /\.roulette-coin\{/);
   assert.match(page, /\.roulette-coin\.dropping\{/);
   assert.match(page, /coin\.classList\.add\("dropping"\)/);
+  const coinIndex = page.indexOf('coin.classList.add("dropping")');
+  const leverIndex = page.indexOf('lever.classList.add("pulled")');
+  assert.ok(coinIndex > -1 && leverIndex > -1 && coinIndex < leverIndex, 'coin drop must be triggered before the lever pull');
+  const coinImgUrlIndex = page.indexOf('var coinImgUrl=coin?coin.getAttribute("src"):""');
+  assert.ok(coinImgUrlIndex > -1, 'payout coins must reuse the real coin image src, not a CSS-drawn circle');
   assert.match(page, /function playCoinSound\(\)/);
   assert.match(page, /function playLeverSound\(\)/);
   assert.match(page, /function playReelStopSound\(i\)/);
