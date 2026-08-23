@@ -41,3 +41,8 @@ test('renderTopPage includes links to both roulette pages and the shop', () => {
   assert.match(page, /href="\/roulette\/recommend"/);
   assert.match(page, /href="\/shop"/);
 });
+
+test('renderTopPage includes a link to the incremental game', () => {
+  const page = renderTopPage({ history: [], favorites: [] });
+  assert.match(page, /href="\/incremental"/);
+});
