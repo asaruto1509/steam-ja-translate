@@ -91,3 +91,12 @@ test('renderIncrementalPage computes exponential per-tier purchase cost and wire
   assert.match(html, /if\(dp<cost\)return;/);
   assert.match(html, /owned\[i\]\+\+;/);
 });
+
+test('renderIncrementalPage fetches the backlog roster and overrides tier names, falling back to generic names on failure', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var FALLBACK_NAMES=\["従業員1","従業員2","従業員3","従業員4","従業員5","従業員6","従業員7","従業員8","従業員9","従業員10","従業員11","従業員12"\];/);
+  assert.match(html, /fetch\("\/api\/incremental\/roster"\)\.then\(function\(r\)\{return r\.json\(\);\}\)\.then\(function\(d\)\{/);
+  assert.match(html, /var roster=\(d&&d\.roster\)\|\|\[\];/);
+  assert.match(html, /var label=\(roster\[i\]&&roster\[i\]\.name\)\?roster\[i\]\.name:FALLBACK_NAMES\[i\];/);
+  assert.match(html, /\}\)\.catch\(function\(\)\{\}\);/);
+});
