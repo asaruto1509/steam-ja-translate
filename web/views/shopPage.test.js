@@ -33,6 +33,13 @@ test('renderShopPage includes coin-skin and lever-skin cosmetic items', () => {
   assert.match(html, /id="shop-leverskin-black"/);
 });
 
+test('renderShopPage includes a BGM on/off toggle', () => {
+  const html = renderShopPage();
+  assert.match(html, /data-item="bgm"/);
+  assert.match(html, /id="shop-bgm-on"/);
+  assert.match(html, /id="shop-bgm-off"/);
+});
+
 test('renderShopPage includes soundpack and shake-intensity items', () => {
   const html = renderShopPage();
   assert.match(html, /data-item="soundpack"/);

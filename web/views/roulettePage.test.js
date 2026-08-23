@@ -78,6 +78,11 @@ test('renderRoulettePage includes an ambient particle backdrop and a low-balance
   assert.match(html, /id="roulette-low-balance-warning"/);
 });
 
+test('renderRoulettePage includes a diagonal-line side-bet checkbox', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /id="roulette-multiline-checkbox"/);
+});
+
 test('renderRoulettePage escapes the title', () => {
   const html = renderRoulettePage({ title: '<script>alert(1)</script>', spinEndpoint: '/api/y' });
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);

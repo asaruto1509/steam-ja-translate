@@ -129,7 +129,7 @@ test('renderLayout renders a miss banner but still recommends a consolation game
   assert.match(page, /ハズレ/);
   assert.match(page, /spin\(d\.candidates,d\.hit,d\.reelIndexes\)/);
   const missBranchStart = page.indexOf('}else{playMissSound();');
-  const missBranchEnd = page.indexOf('resultEl.offsetHeight;', missBranchStart);
+  const missBranchEnd = page.indexOf('if(lastSpinMultiline){', missBranchStart);
   const missBranch = page.slice(missBranchStart, missBranchEnd);
   assert.match(missBranch, /var consolation=candidates\[reelIndexes\[0\]\]/, 'a miss must still pick a game to recommend');
   assert.match(missBranch, /makeImg\(consolation\.imageUrl,consolation\.name\)/);
@@ -253,21 +253,19 @@ test('renderLayout offers a double-up gamble after a win before crediting the pa
   assert.equal(immediateCreditIndex, -1, 'payout must not be auto-credited before the double-up choice');
 });
 
-test('renderLayout does not re-enable the spin button until a pending double-up is resolved', () => {
+test('renderLayout does not re-enable the spin button until a pending double-up (and any bonus round after it) is resolved', () => {
   const page = renderLayout('<p>x</p>', {});
   const hitBranchStart = page.indexOf('if(hit){');
   const hitBranchEnd = page.indexOf('}else{', hitBranchStart);
   const hitBranch = page.slice(hitBranchStart, hitBranchEnd);
-  // resetButton() should appear exactly once in the whole hit branch, and only inside
-  // finishDoubleup's body - never unconditionally right after the win visuals are built.
-  const resetCalls = (hitBranch.match(/resetButton\(\);/g) || []).length;
-  assert.equal(resetCalls, 1, 'resetButton must be called exactly once (from finishDoubleup), not unconditionally after a win');
-  assert.match(page, /function finishDoubleup\(\)\{/);
-  const finishBody = page.slice(page.indexOf('function finishDoubleup(){'), page.indexOf('function finishDoubleup(){') + 200);
-  assert.match(finishBody, /resetButton\(\);/);
   // the win-visuals block (before doubleupDiv is built) must not itself call resetButton
   const preDoubleupBlock = hitBranch.slice(0, hitBranch.indexOf('var doubleupDiv'));
   assert.doesNotMatch(preDoubleupBlock, /resetButton\(\);/);
+  // finishDoubleup must route exclusively through maybeStartCardBonus, never call resetButton directly itself
+  assert.match(page, /function finishDoubleup\(\)\{clearTimeout\(autoCashoutId\);doubleupDone=true;doubleupDiv\.innerHTML="";maybeStartCardBonus\(\);\}/);
+  assert.doesNotMatch(page.slice(page.indexOf('function finishDoubleup(){'), page.indexOf('function finishDoubleup(){') + 100), /resetButton/);
+  // maybeStartCardBonus only calls resetButton once the bonus round (if any) has resolved
+  assert.match(page, /function maybeStartCardBonus\(\)\{if\(Math\.random\(\)<0\.15\)\{startCardBonusRound\(function\(\)\{resetButton\(\);runBonusRoll\(\);\}\);\}else\{resetButton\(\);runBonusRoll\(\);\}\}/);
 });
 
 test('renderLayout places the double-up choice immediately after the payout amount, before the winner banner/image, so it is reachable without scrolling past game details', () => {
@@ -321,7 +319,7 @@ test('renderLayout requires the player to tap the coin to insert it before a spi
   assert.match(insertCoinBody, /playCoinSound\(\);/);
   assert.match(page, /coinInsertEl\.addEventListener\("click",insertCoin\);/);
   // the gate lives inside startSpin itself, so both the button and the lever-drag path are covered
-  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim,strength){'), page.indexOf('function startSpin(skipLeverAnim,strength){') + 440);
+  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim,strength){'), page.indexOf('function startSpin(skipLeverAnim,strength){') + 600);
   assert.match(startSpinBody, /var usingFreeSpin=freeSpinsRemaining>0;/);
   assert.match(startSpinBody, /if\(!usingFreeSpin&&!coinInserted\)\{nudgeCoin\(\);return;\}/);
   assert.match(startSpinBody, /coinInserted=false;/, 'the coin must be consumed once a real (non-free) spin actually starts');
@@ -491,7 +489,7 @@ test('renderLayout renders an always-on ambient particle backdrop on the machine
 test('renderLayout shows a low-balance warning once credits drop below the spin cost with no free spins or coin queued', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /function updateLowBalanceWarning\(\)\{/);
-  assert.match(page, /var show=freeSpinsRemaining<=0&&!coinInserted&&credits<SPIN_COST;/);
+  assert.match(page, /var show=freeSpinsRemaining<=0&&!coinInserted&&credits<\(SPIN_COST\+multilineCost\);/);
   assert.match(page, /setCredits\(next\)\{[\s\S]{0,300}updateLowBalanceWarning\(\);\}/);
   assert.match(page, /function insertCoin\(\)\{[\s\S]{0,250}updateLowBalanceWarning\(\);\}/);
 });
@@ -575,12 +573,60 @@ test('renderLayout wires a data-reset button that confirms, clears every roulett
   assert.match(shopBlock, /RESET_KEYS\.forEach\(function\(k\)\{localStorage\.removeItem\(k\);\}\);/);
   assert.match(shopBlock, /location\.reload\(\);/);
   // must cover every persisted key, not just credits
-  ['CREDITS_KEY', 'PAYOUT_BOOST_KEY', 'THEME_KEY', 'THEME_UNLOCKED_KEY', 'SOUNDPACK_KEY', 'SOUNDPACK_UNLOCKED_KEY',
-    'COINSKIN_KEY', 'COINSKIN_UNLOCKED_KEY', 'LEVERSKIN_KEY', 'LEVERSKIN_UNLOCKED_KEY', 'SHAKE_KEY'].forEach((key) => {
+  const resetKeyNames = ['CREDITS_KEY', 'PAYOUT_BOOST_KEY', 'THEME_KEY', 'THEME_UNLOCKED_KEY', 'SOUNDPACK_KEY', 'SOUNDPACK_UNLOCKED_KEY',
+    'COINSKIN_KEY', 'COINSKIN_UNLOCKED_KEY', 'LEVERSKIN_KEY', 'LEVERSKIN_UNLOCKED_KEY', 'SHAKE_KEY', 'BGM_KEY'];
+  resetKeyNames.forEach((key) => {
     assert.match(shopBlock, new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `RESET_KEYS must include ${key}`);
   });
   assert.match(shopBlock, /"ja_trans_stats_v1"/);
   assert.match(shopBlock, /"ja_trans_achievements_v1"/);
+  // guards against silently forgetting to add a key to the array itself as new persisted state is introduced
+  const resetKeysLine = shopBlock.slice(shopBlock.indexOf('var RESET_KEYS='), shopBlock.indexOf('var resetBtn='));
+  const entryCount = (resetKeysLine.match(/,/g) || []).length + 1;
+  assert.equal(entryCount, resetKeyNames.length + 4, 'RESET_KEYS entry count must include all named *_KEY constants plus the four inline string keys (jackpot, freespins, stats, achievements)');
+});
+
+test('renderLayout offers a diagonal-line side bet, evaluated client-side from the server-supplied reelIndexes/candidates without the client choosing the outcome', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var MULTILINE_COST=8;/);
+  assert.match(page, /var DIAGONAL_PAYOUT=16;/);
+  assert.match(page, /lastSpinMultiline=!!\(multilineCheckbox&&multilineCheckbox\.checked&&credits>=MULTILINE_COST\);/);
+  assert.match(page, /if\(lastSpinMultiline\)\{setCredits\(credits-MULTILINE_COST\);\}/);
+  // a failed spin fetch must refund the side-bet charge too, not just the main spin cost
+  assert.match(page, /if\(lastSpinMultiline\)\{setCredits\(credits\+MULTILINE_COST\);lastSpinMultiline=false;\}/);
+  assert.match(page, /var mlTop=\(reelIndexes\[0\]-1\+mlLen\)%mlLen;/);
+  assert.match(page, /var mlMid=reelIndexes\[1\]%mlLen;/);
+  assert.match(page, /var mlBot=\(reelIndexes\[2\]\+1\)%mlLen;/);
+  assert.match(page, /var diagonalHit=\(mlTop===mlMid\)&&\(mlMid===mlBot\);/);
+  assert.match(page, /\.roulette-reels\{position:relative;/);
+  assert.match(page, /\.roulette-reels\.diagonal-hit::after\{/);
+});
+
+test('renderLayout accounts for the multiline side-bet cost in the low-balance warning threshold', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var multilineCost=\(multilineCheckbox&&multilineCheckbox\.checked\)\?MULTILINE_COST:0;/);
+  assert.match(page, /var show=freeSpinsRemaining<=0&&!coinInserted&&credits<\(SPIN_COST\+multilineCost\);/);
+});
+
+test('renderLayout lets the shop toggle the ambient BGM loop on/off, and startAmbientLoop respects it', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /function isBgmEnabled\(\)\{return localStorage\.getItem\(BGM_KEY\)!=="off";\}/);
+  assert.match(page, /function startAmbientLoop\(\)\{'?\s*if\(ambientLoopId\|\|!isBgmEnabled\(\)\)return;/);
+  const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');
+  const shopBlock = page.slice(shopBlockStart);
+  assert.match(shopBlock, /function loadBgmEnabled\(\)\{return localStorage\.getItem\(BGM_KEY\)!=="off";\}/);
+  assert.match(shopBlock, /function saveBgmEnabled\(v\)\{localStorage\.setItem\(BGM_KEY,v\?"on":"off"\);\}/);
+  assert.match(shopBlock, /saveBgmEnabled\(v==="on"\);/);
+});
+
+test('renderLayout occasionally offers a pick-a-card bonus round after a double-up resolves, gating the spin button until it is resolved so a new spin cannot wipe it', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /function finishDoubleup\(\)\{clearTimeout\(autoCashoutId\);doubleupDone=true;doubleupDiv\.innerHTML="";maybeStartCardBonus\(\);\}/);
+  assert.match(page, /function maybeStartCardBonus\(\)\{if\(Math\.random\(\)<0\.15\)\{startCardBonusRound\(function\(\)\{resetButton\(\);runBonusRoll\(\);\}\);\}else\{resetButton\(\);runBonusRoll\(\);\}\}/);
+  assert.match(page, /function startCardBonusRound\(onDone\)\{/);
+  // the auto-resolve safety timeout must exist so the spin button cannot get stuck disabled forever
+  assert.match(page, /var autoPickId=setTimeout\(function\(\)\{/);
+  assert.match(page, /clearTimeout\(autoPickId\);/);
 });
 
 test('renderLayout wires up the shop coin-skin and lever-skin controls with escalating unlock costs', () => {
