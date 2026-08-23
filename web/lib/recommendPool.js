@@ -67,7 +67,17 @@ async function fetchLargeCatalogPool(pages, pageSize) {
   return dedupeById(pool);
 }
 
+// スピンのたびにfeaturedcategories+検索4ページを叩くと、テスト等で連続スピンした際に
+// Steam側のレート制限(403)に引っかかる(実機で確認済み)。数分キャッシュし、キャッシュ窓の間は
+// Steamに一切アクセスしない。プール自体はどのみち数分単位でしか変化しないため実害もない。
+var poolCache = null;
+var POOL_CACHE_TTL_MS = 5 * 60 * 1000;
+
 async function fetchExpandedPool() {
+  var now = Date.now();
+  if (poolCache && (now - poolCache.at) < POOL_CACHE_TTL_MS) {
+    return poolCache.pool;
+  }
   var r = await fetch('https://store.steampowered.com/api/featuredcategories?cc=jp&l=japanese');
   if (!r.ok) throw new Error('featuredcategories取得に失敗しました(' + r.status + ')');
   var d = await r.json();
@@ -76,7 +86,9 @@ async function fetchExpandedPool() {
     .concat(extractItems(d, 'new_releases'))
     .concat(extractItems(d, 'specials'));
   var catalog = await fetchLargeCatalogPool(4, 50);
-  return dedupeById(curated.concat(catalog));
+  var pool = dedupeById(curated.concat(catalog));
+  poolCache = { pool: pool, at: now };
+  return pool;
 }
 
 module.exports = {

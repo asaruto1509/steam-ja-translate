@@ -155,6 +155,22 @@ var RECOMMEND_MAX_CANDIDATES = 16;
 // (同じ顔ぶれが連続で出て「ランダム性が低い」と感じられる問題への対策、実機確認済み)。
 var recentRecommendIds = [];
 
+// isRealGame(=Steam appdetails呼び出し)を毎スピン最大45件ずつ叩くと、連続スピン時に
+// Steam側のレート制限(403)を誘発する(実機確認済み)。結果はappidごとに数十分単位で
+// 変わらないため、プロセス内メモリキャッシュで再利用しSteamへのアクセス数を抑える。
+var realGameCache = {};
+var REAL_GAME_CACHE_TTL_MS = 30 * 60 * 1000;
+async function cachedIsRealGame(appid) {
+  var cached = realGameCache[appid];
+  var now = Date.now();
+  if (cached && (now - cached.at) < REAL_GAME_CACHE_TTL_MS) {
+    return cached.value;
+  }
+  var value = await steamLib.isRealGame(appid);
+  realGameCache[appid] = { value: value, at: now };
+  return value;
+}
+
 app.post('/api/roulette/recommend/spin', async function (req, res) {
   try {
     // scripts/recommend-games.jsのfetchFeaturedPool(top_sellers+new_releasesのみ、
@@ -163,7 +179,7 @@ app.post('/api/roulette/recommend/spin', async function (req, res) {
     var pool = await recommendPool.fetchExpandedPool();
     var usablePool = roulette.excludeRecentlyShown(pool, recentRecommendIds, RECOMMEND_MAX_CANDIDATES);
     var shuffledPool = recommendGames.pickRandomGames(usablePool, usablePool.length);
-    var realGames = await gamePool.pickRealGames(shuffledPool, RECOMMEND_MAX_CANDIDATES, steamLib.isRealGame, 45);
+    var realGames = await gamePool.pickRealGames(shuffledPool, RECOMMEND_MAX_CANDIDATES, cachedIsRealGame, 45);
     if (!realGames.length) {
       res.json({ error: 'no_candidates' });
       return;
