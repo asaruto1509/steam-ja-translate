@@ -134,7 +134,7 @@ test('renderLayout renders a miss banner but still recommends a consolation game
   assert.match(missBranch, /var consolation=candidates\[reelIndexes\[0\]\]/, 'a miss must still pick a game to recommend');
   assert.match(missBranch, /makeImg\(consolation\.imageUrl,consolation\.name\)/);
   assert.match(missBranch, /"\/analyze\?name="\+encodeURIComponent\(consolation\.name\)/);
-  assert.doesNotMatch(missBranch, /setCredits\(credits\+/, 'a miss must not credit any payout');
+  assert.doesNotMatch(missBranch, /setCredits\(credits\+payout\)/, 'a miss must not credit the win payout (a small separate insurance payout is allowed)');
 });
 
 test('renderLayout plays synthesized sound effects on spin, reel stop, reach, win, and miss', () => {
@@ -213,16 +213,19 @@ test('renderLayout triggers a reach effect when the first two reels already matc
   assert.match(page, /hideReach\(\);onAllLanded/);
 });
 
-test('renderLayout charges 15 credits per spin, refunding it (or a spent free spin) if the API call fails', () => {
+test('renderLayout charges the current bet level per spin, refunding exactly what was charged (or a spent free spin) if the API call fails', () => {
   const page = renderLayout('<p>x</p>', {});
-  assert.match(page, /var SPIN_COST=15/);
+  assert.match(page, /var BET_LEVELS=\[\{id:"low",cost:10,mult:0\.7\},\{id:"normal",cost:15,mult:1\},\{id:"high",cost:20,mult:1\.3\}\];/);
+  assert.match(page, /var SPIN_COST=currentBetLevel\.cost;/);
+  assert.match(page, /var lastSpinCost=0;/);
   assert.match(page, /var lastSpinUsedFreeSpin=false/);
   assert.match(page, /var usingFreeSpin=freeSpinsRemaining>0;/);
   assert.match(page, /lastSpinUsedFreeSpin=usingFreeSpin;/);
+  assert.match(page, /lastSpinCost=SPIN_COST;/);
   const spendIndex = page.indexOf('else{setCredits(credits-SPIN_COST);}');
-  const refundIndex = page.indexOf('else{setCredits(credits+SPIN_COST);}');
-  assert.ok(spendIndex > -1, 'must deduct SPIN_COST on a normal (non-free) spin');
-  assert.ok(refundIndex > -1, 'must refund SPIN_COST on a failed spin');
+  const refundIndex = page.indexOf('else{setCredits(credits+lastSpinCost);}');
+  assert.ok(spendIndex > -1, 'must deduct the current SPIN_COST on a normal (non-free) spin');
+  assert.ok(refundIndex > -1, 'must refund lastSpinCost (what was actually charged), not the current SPIN_COST which may have changed if the bet level was switched mid-flight');
 });
 
 test('renderLayout grows a progressive jackpot every spin and can pay it out on a rare mega-jackpot hit', () => {
@@ -319,7 +322,7 @@ test('renderLayout requires the player to tap the coin to insert it before a spi
   assert.match(insertCoinBody, /playCoinSound\(\);/);
   assert.match(page, /coinInsertEl\.addEventListener\("click",insertCoin\);/);
   // the gate lives inside startSpin itself, so both the button and the lever-drag path are covered
-  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim,strength){'), page.indexOf('function startSpin(skipLeverAnim,strength){') + 600);
+  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim,strength){'), page.indexOf('function startSpin(skipLeverAnim,strength){') + 760);
   assert.match(startSpinBody, /var usingFreeSpin=freeSpinsRemaining>0;/);
   assert.match(startSpinBody, /if\(!usingFreeSpin&&!coinInserted\)\{nudgeCoin\(\);return;\}/);
   assert.match(startSpinBody, /coinInserted=false;/, 'the coin must be consumed once a real (non-free) spin actually starts');
@@ -331,7 +334,7 @@ test('renderLayout shows a coin-insert prompt on the spin button when no coin is
   assert.match(page, /function updateSpinBtnLabel\(\)\{/);
   const labelBody = page.slice(page.indexOf('function updateSpinBtnLabel(){'), page.indexOf('function updateSpinBtnLabel(){') + 160);
   assert.match(labelBody, /spinBtn\.textContent=\(freeSpinsRemaining>0\|\|coinInserted\)\?"🎰 回す":"🪙 コインを入れてね";/);
-  assert.match(page, /function resetButton\(\)\{spinning=false;spinBtn\.disabled=false;if\(coin\)\{coin\.classList\.remove\("dropping"\);\}updateSpinBtnLabel\(\);updateLowBalanceWarning\(\);\}/);
+  assert.match(page, /function resetButton\(\)\{spinning=false;spinBtn\.disabled=false;if\(coin\)\{coin\.classList\.remove\("dropping"\);\}updateSpinBtnLabel\(\);updateLowBalanceWarning\(\);betLevelBtns\.forEach\(function\(btn\)\{btn\.disabled=false;\}\);\}/);
 });
 
 test('renderLayout lets the player drag the lever knob down to start a spin, as an alternative to the button', () => {
@@ -379,7 +382,7 @@ test('renderLayout applies a shop-purchased payout boost to the win amount, and 
   assert.match(page, /var PAYOUT_BOOST_KEY="ja_trans_shop_payout_level_v1"/);
   assert.match(page, /function loadPayoutBoostLevel\(\)\{/);
   const hitBranchStart = page.indexOf('if(hit){');
-  const boostApplication = page.slice(hitBranchStart, hitBranchStart + 600);
+  const boostApplication = page.slice(hitBranchStart, hitBranchStart + 700);
   assert.match(boostApplication, /var payoutBoostLevel=loadPayoutBoostLevel\(\);/);
   assert.match(boostApplication, /if\(payoutBoostLevel>0\)\{payout=Math\.round\(payout\*\(1\+payoutBoostLevel\*0\.05\)\/10\)\*10;\}/);
   assert.match(page, /var THEME_KEY="ja_trans_shop_theme_v1"/);
@@ -426,7 +429,7 @@ test('renderLayout tracks stats (spins, wins, streak, jackpots, doubleup, free-s
   assert.match(page, /bumpStat\("doubleupLosses",1\);/);
   assert.match(page, /bumpStat\("freeSpinBonuses",1\);/);
   const shopBlock = page.slice(shopBlockIndex);
-  assert.equal((shopBlock.match(/bumpStat\("shopPurchases",1\);/g) || []).length, 6, 'all shop purchase paths (free spins, payout boost, theme, soundpack, coin skin, lever skin) must count toward the achievement');
+  assert.equal((shopBlock.match(/bumpStat\("shopPurchases",1\);/g) || []).length, 7, 'all shop purchase paths (free spins, payout boost, insurance, theme, soundpack, coin skin, lever skin) must count toward the achievement');
 });
 
 test('renderLayout wires up the shop page: free-spin purchase, a capped/escalating payout-boost, and theme unlocks, all spending the shared credits balance', () => {
@@ -574,16 +577,19 @@ test('renderLayout wires a data-reset button that confirms, clears every roulett
   assert.match(shopBlock, /location\.reload\(\);/);
   // must cover every persisted key, not just credits
   const resetKeyNames = ['CREDITS_KEY', 'PAYOUT_BOOST_KEY', 'THEME_KEY', 'THEME_UNLOCKED_KEY', 'SOUNDPACK_KEY', 'SOUNDPACK_UNLOCKED_KEY',
-    'COINSKIN_KEY', 'COINSKIN_UNLOCKED_KEY', 'LEVERSKIN_KEY', 'LEVERSKIN_UNLOCKED_KEY', 'SHAKE_KEY', 'BGM_KEY'];
+    'COINSKIN_KEY', 'COINSKIN_UNLOCKED_KEY', 'LEVERSKIN_KEY', 'LEVERSKIN_UNLOCKED_KEY', 'SHAKE_KEY', 'BGM_KEY', 'INSURANCE_KEY'];
   resetKeyNames.forEach((key) => {
     assert.match(shopBlock, new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `RESET_KEYS must include ${key}`);
   });
   assert.match(shopBlock, /"ja_trans_stats_v1"/);
   assert.match(shopBlock, /"ja_trans_achievements_v1"/);
+  assert.match(shopBlock, /"ja_trans_roulette_betlevel_v1"/);
+  assert.match(shopBlock, /"ja_trans_login_bonus_date_v1"/);
+  assert.match(shopBlock, /"ja_trans_daily_missions_v1"/);
   // guards against silently forgetting to add a key to the array itself as new persisted state is introduced
   const resetKeysLine = shopBlock.slice(shopBlock.indexOf('var RESET_KEYS='), shopBlock.indexOf('var resetBtn='));
   const entryCount = (resetKeysLine.match(/,/g) || []).length + 1;
-  assert.equal(entryCount, resetKeyNames.length + 4, 'RESET_KEYS entry count must include all named *_KEY constants plus the four inline string keys (jackpot, freespins, stats, achievements)');
+  assert.equal(entryCount, resetKeyNames.length + 7, 'RESET_KEYS entry count must include all named *_KEY constants plus the seven inline string keys (jackpot, freespins, bet level, login bonus, daily missions, stats, achievements)');
 });
 
 test('renderLayout offers a diagonal-line side bet, evaluated client-side from the server-supplied reelIndexes/candidates without the client choosing the outcome', () => {
@@ -656,6 +662,67 @@ test('renderLayout offers a purchasable scratch card with a negative expected va
   const pTwoSame = 1 - pAllSame - pAllDistinct;
   const ev = pAllSame * 5 + pTwoSame * 1;
   assert.ok(ev < 1, 'scratch card EV must be negative so it cannot fund itself');
+});
+
+test('renderLayout shows a persistent lucky-day banner the first time the server reports luckyDay:true on a spin response', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var luckyDayShown=false;/);
+  assert.match(page, /if\(d\.luckyDay&&!luckyDayShown\)\{/);
+  assert.match(page, /luckyDayShown=true;/);
+  assert.match(page, /luckyDayEl\.textContent="🍀 本日はラッキーデー!当選率UP中!";/);
+});
+
+test('renderLayout lets the player pick a bet level (low/normal/high) that scales both the spin cost and the payout, disabling the selector while spinning', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var currentBetLevel=findBetLevel\(loadBetLevelId\(\)\);/);
+  assert.match(page, /function updateBetLevelUI\(\)\{/);
+  assert.match(page, /currentBetLevel=findBetLevel\(btn\.getAttribute\("data-bet"\)\);/);
+  assert.match(page, /SPIN_COST=currentBetLevel\.cost;/);
+  assert.match(page, /localStorage\.setItem\(BETLEVEL_KEY,currentBetLevel\.id\);/);
+  assert.match(page, /lastBetMult=currentBetLevel\.mult;/);
+  assert.match(page, /payout=Math\.round\(payout\*lastBetMult\/10\)\*10;/);
+  assert.match(page, /betLevelBtns\.forEach\(function\(btn\)\{btn\.disabled=true;\}\);/);
+});
+
+test('renderLayout grants a once-per-calendar-day login bonus and tracks daily missions, paying rewards from the roulette page (not the shared achievement scope)', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var LOGIN_BONUS_KEY="ja_trans_login_bonus_date_v1";/);
+  assert.match(page, /var LOGIN_BONUS_AMOUNT=30;/);
+  assert.match(page, /if\(last!==today\)\{/);
+  assert.match(page, /setCredits\(credits\+LOGIN_BONUS_AMOUNT\);/);
+  assert.match(page, /checkLoginBonus\(\);/);
+  assert.match(page, /var MISSION_SPIN_TARGET=3;/);
+  assert.match(page, /var MISSION_WIN_TARGET=1;/);
+  assert.match(page, /function recordSpinForMissions\(\)\{/);
+  assert.match(page, /function recordWinForMissions\(\)\{/);
+  assert.match(page, /setCredits\(credits\+MISSION_SPIN_REWARD\);/);
+  assert.match(page, /setCredits\(credits\+MISSION_WIN_REWARD\);/);
+  // both hooks must be called from inside the roulette-page block where setCredits exists
+  assert.match(page, /bumpStat\("totalSpins",1\);bumpExpAndCheckLevelUp\(1\);recordSpinForMissions\(\);/);
+  assert.match(page, /recordWinForMissions\(\);/);
+});
+
+test('renderLayout tracks player EXP/level (spin+win based) with a HUD badge and a level-up toast, independent of the credits economy', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /function levelForExp\(exp\)\{return Math\.floor\(Math\.sqrt\(\(exp\|\|0\)\/20\)\)\+1;\}/);
+  assert.match(page, /function updateLevelBadge\(\)\{if\(!levelBadgeEl\)return;var exp=loadStats\(\)\.exp\|\|0;/);
+  assert.match(page, /function bumpExpAndCheckLevelUp\(delta\)\{/);
+  assert.match(page, /bumpStat\("exp",delta\);/);
+  assert.match(page, /showGenericToast\("🎊 レベルアップ!Lv\."\+afterLv\+" "\+titleForLevel\(afterLv\)\);/);
+});
+
+test('renderLayout applies a shop-purchased insurance ticket automatically on a miss, crediting a small guaranteed payout and consuming one charge', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var INSURANCE_PAYOUT=10;/);
+  assert.match(page, /var insuranceCount=loadInsuranceCount\(\);/);
+  assert.match(page, /if\(insuranceCount>0\)\{/);
+  assert.match(page, /saveInsuranceCount\(insuranceCount-1\);/);
+  assert.match(page, /setCredits\(credits\+INSURANCE_PAYOUT\);/);
+  const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');
+  const shopBlock = page.slice(shopBlockStart);
+  assert.match(shopBlock, /var INSURANCE_COST=80;/);
+  assert.match(shopBlock, /var INSURANCE_CHARGES=3;/);
+  assert.match(shopBlock, /saveInsuranceCount\(loadInsuranceCount\(\)\+INSURANCE_CHARGES\);/);
 });
 
 test('renderLayout wires up the shop coin-skin and lever-skin controls with escalating unlock costs', () => {

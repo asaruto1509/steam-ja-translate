@@ -1,5 +1,26 @@
 'use strict';
 
+var BASE_WIN_RATE = 0.4;
+var LUCKY_DAY_WIN_RATE = 0.55;
+var LUCKY_DAY_MODULO = 7;
+
+// 「ラッキーデー」判定はサーバー側で日付(UTCのYYYY-MM-DD)から決定論的に算出する。
+// クライアントから当選率や「今日はラッキーか」を送らせる設計は、確率の不正操作を
+// 許してしまうため避ける(クライアントは常にサーバーが返したluckyDayフラグを表示するだけ)。
+function isLuckyDay(date) {
+  date = date || new Date();
+  var dateStr = date.toISOString().slice(0, 10);
+  var hash = 0;
+  for (var i = 0; i < dateStr.length; i++) {
+    hash = (hash * 31 + dateStr.charCodeAt(i)) >>> 0;
+  }
+  return (hash % LUCKY_DAY_MODULO) === 0;
+}
+
+function effectiveWinRate(date) {
+  return isLuckyDay(date) ? LUCKY_DAY_WIN_RATE : BASE_WIN_RATE;
+}
+
 // 3リール共通の「当たり/ハズレ」抽選。rngはこの順で消費する:
 // 1) 候補プールから当選ゲームのindexを1回抽選
 // 2) 当たり/ハズレ判定に1回消費(winRate未満なら当たり)
@@ -10,7 +31,7 @@ function pickTripleResult(candidates, rng, winRate) {
   rng = rng || Math.random;
   // 当初75%だったが、当選のたびに増える払い出しと組み合わせると残高が際限なく増え続け
   // 「ギャンブル」としての緊張感がなくなる(ユーザー指摘)。40%に引き下げる。
-  winRate = typeof winRate === 'number' ? winRate : 0.4;
+  winRate = typeof winRate === 'number' ? winRate : BASE_WIN_RATE;
   var winnerIndex = Math.floor(rng() * candidates.length);
   var hit = candidates.length <= 1 ? true : rng() < winRate;
   if (hit) {
@@ -46,5 +67,9 @@ function buildSpinPayload(candidates, result) {
 module.exports = {
   pickTripleResult: pickTripleResult,
   excludeRecentlyShown: excludeRecentlyShown,
-  buildSpinPayload: buildSpinPayload
+  buildSpinPayload: buildSpinPayload,
+  isLuckyDay: isLuckyDay,
+  effectiveWinRate: effectiveWinRate,
+  BASE_WIN_RATE: BASE_WIN_RATE,
+  LUCKY_DAY_WIN_RATE: LUCKY_DAY_WIN_RATE
 };

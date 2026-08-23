@@ -22,6 +22,7 @@ function renderShopPage(opts) {
     + '<div class="shop-items">'
     + shopItemHtml('freespins', '🎉', 'フリースピン購入', 'クレジットを消費してフリースピンを3回分購入します。')
     + shopItemHtml('payout', '💰', '配当ブースト', '当選時の配当額を永続的に上昇させます。(最大Lv5、各+5%、レベルごとに価格上昇)')
+    + shopItemHtml('insurance', '🛡️', '保険チケット', 'ハズレ時に自動で少額の慰め金がもらえます。購入回数分だけ自動で消費されます。')
     + '<div class="shop-item" data-item="theme">'
     + '<div class="shop-item-icon">🎨</div>'
     + '<div class="shop-item-info">'

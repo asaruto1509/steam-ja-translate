@@ -15,6 +15,8 @@ test('renderShopPage includes the free-spins, payout-boost, and theme shop items
   assert.match(html, /id="shop-buy-freespins"/);
   assert.match(html, /data-item="payout"/);
   assert.match(html, /id="shop-buy-payout"/);
+  assert.match(html, /data-item="insurance"/);
+  assert.match(html, /id="shop-buy-insurance"/);
   assert.match(html, /data-item="theme"/);
   assert.match(html, /id="shop-theme-gold"/);
   assert.match(html, /id="shop-theme-red"/);

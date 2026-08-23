@@ -93,6 +93,24 @@ test('renderRoulettePage includes a wheel-of-fortune side game and a scratch-car
   assert.match(html, /id="roulette-scratch-result"/);
 });
 
+test('renderRoulettePage includes a lucky-day notification banner', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /id="roulette-luckyday-banner"/);
+});
+
+test('renderRoulettePage includes a bet-level selector and a level/rank badge', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /class="roulette-bet-level-btn" data-bet="low"/);
+  assert.match(html, /class="roulette-bet-level-btn" data-bet="normal"/);
+  assert.match(html, /class="roulette-bet-level-btn" data-bet="high"/);
+  assert.match(html, /id="roulette-level-badge"/);
+});
+
+test('renderRoulettePage includes a daily-missions status line', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /id="roulette-missions-banner"/);
+});
+
 test('renderRoulettePage escapes the title', () => {
   const html = renderRoulettePage({ title: '<script>alert(1)</script>', spinEndpoint: '/api/y' });
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);

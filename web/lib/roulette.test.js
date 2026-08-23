@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { pickTripleResult, excludeRecentlyShown, buildSpinPayload } = require('./roulette.js');
+const { pickTripleResult, excludeRecentlyShown, buildSpinPayload, isLuckyDay, effectiveWinRate, BASE_WIN_RATE, LUCKY_DAY_WIN_RATE } = require('./roulette.js');
 
 function queueRng(values) {
   let i = 0;
@@ -63,6 +63,27 @@ test('pickTripleResult defaults winRate to 0.4 when not given', () => {
   const rngMiss = queueRng([0.5, 0.41]); // hit-roll=0.41 >= 0.4 default -> miss
   const miss = pickTripleResult(candidates, rngMiss);
   assert.equal(miss.hit, false);
+});
+
+test('isLuckyDay is a deterministic function of the UTC date, not client-supplied input', () => {
+  const lucky = new Date(Date.UTC(2026, 7, 7));
+  const notLucky = new Date(Date.UTC(2026, 7, 1));
+  assert.equal(isLuckyDay(lucky), true);
+  assert.equal(isLuckyDay(notLucky), false);
+  // same date must always resolve the same way (stable across requests within the day)
+  assert.equal(isLuckyDay(new Date(Date.UTC(2026, 7, 7))), isLuckyDay(new Date(Date.UTC(2026, 7, 7))));
+  // roughly 1-in-7 days should be lucky
+  const lukcyCount = Array.from({ length: 31 }, (_, i) => isLuckyDay(new Date(Date.UTC(2026, 7, i + 1)))).filter(Boolean).length;
+  assert.ok(lukcyCount >= 3 && lukcyCount <= 7, `expected roughly 1-in-7 lucky days in a 31-day month, got ${lukcyCount}`);
+});
+
+test('effectiveWinRate boosts the win rate only on a lucky day, and takes no client input', () => {
+  assert.equal(effectiveWinRate.length, 1, 'effectiveWinRate must only accept a date, never a client-supplied rate or lucky flag');
+  const lucky = new Date(Date.UTC(2026, 7, 7));
+  const notLucky = new Date(Date.UTC(2026, 7, 1));
+  assert.equal(effectiveWinRate(lucky), LUCKY_DAY_WIN_RATE);
+  assert.equal(effectiveWinRate(notLucky), BASE_WIN_RATE);
+  assert.ok(LUCKY_DAY_WIN_RATE > BASE_WIN_RATE);
 });
 
 test('excludeRecentlyShown filters out ids from the recent list', () => {

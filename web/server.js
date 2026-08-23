@@ -147,8 +147,12 @@ app.post('/api/roulette/backlog/spin', async function (req, res) {
     }
     var shuffled = recommendGames.pickRandomGames(backlog, backlog.length);
     var candidates = shuffled.slice(0, BACKLOG_MAX_CANDIDATES);
-    var result = roulette.pickTripleResult(candidates);
-    res.json(roulette.buildSpinPayload(candidates, result));
+    var today = new Date();
+    var luckyDay = roulette.isLuckyDay(today);
+    var result = roulette.pickTripleResult(candidates, undefined, roulette.effectiveWinRate(today));
+    var payload = roulette.buildSpinPayload(candidates, result);
+    payload.luckyDay = luckyDay;
+    res.json(payload);
   } catch (e) {
     console.error('/api/roulette/backlog/spin failed:', e);
     res.status(500).json({ error: 'internal_error' });
@@ -197,8 +201,12 @@ app.post('/api/roulette/recommend/spin', async function (req, res) {
       return { id: g.id, name: g.name, imageUrl: g.image || steamLib.headerImageUrl(g.id) };
     });
     recentRecommendIds = candidates.map(function (c) { return c.id; });
-    var result = roulette.pickTripleResult(candidates);
-    res.json(roulette.buildSpinPayload(candidates, result));
+    var today = new Date();
+    var luckyDay = roulette.isLuckyDay(today);
+    var result = roulette.pickTripleResult(candidates, undefined, roulette.effectiveWinRate(today));
+    var payload = roulette.buildSpinPayload(candidates, result);
+    payload.luckyDay = luckyDay;
+    res.json(payload);
   } catch (e) {
     console.error('/api/roulette/recommend/spin failed:', e);
     res.status(500).json({ error: 'internal_error' });
