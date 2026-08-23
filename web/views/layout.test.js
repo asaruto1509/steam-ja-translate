@@ -361,14 +361,59 @@ test('renderLayout skips the automatic lever-pull CSS animation when the spin wa
   assert.match(startSpinBody, /else\{setTimeout\(function\(\)\{/);
 });
 
+test('renderLayout persists free spins to localStorage so a shop purchase on another page is picked up on load', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var FREESPINS_KEY="ja_trans_roulette_freespins_v1"/);
+  assert.match(page, /function loadFreeSpins\(\)\{/);
+  assert.match(page, /function saveFreeSpins\(v\)\{localStorage\.setItem\(FREESPINS_KEY,String\(v\)\);\}/);
+  assert.match(page, /function setFreeSpins\(v\)\{/);
+  const setFreeSpinsBody = page.slice(page.indexOf('function setFreeSpins(v){'), page.indexOf('function setFreeSpins(v){') + 160);
+  assert.match(setFreeSpinsBody, /saveFreeSpins\(freeSpinsRemaining\);/);
+  // every mutation site must persist through setFreeSpins rather than touching the variable directly
+  assert.match(page, /if\(lastSpinUsedFreeSpin\)\{setFreeSpins\(freeSpinsRemaining\+1\);\}/);
+  assert.match(page, /if\(lastSpinUsedFreeSpin\)\{setFreeSpins\(freeSpinsRemaining-1\);\}/);
+  assert.match(page, /setFreeSpins\(freeSpinsRemaining\+3\);/);
+});
+
+test('renderLayout applies a shop-purchased payout boost to the win amount, and a shop-purchased theme as a page class', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var PAYOUT_BOOST_KEY="ja_trans_shop_payout_level_v1"/);
+  assert.match(page, /function loadPayoutBoostLevel\(\)\{/);
+  const hitBranchStart = page.indexOf('if(hit){');
+  const boostApplication = page.slice(hitBranchStart, hitBranchStart + 600);
+  assert.match(boostApplication, /var payoutBoostLevel=loadPayoutBoostLevel\(\);/);
+  assert.match(boostApplication, /if\(payoutBoostLevel>0\)\{payout=Math\.round\(payout\*\(1\+payoutBoostLevel\*0\.05\)\/10\)\*10;\}/);
+  assert.match(page, /var THEME_KEY="ja_trans_shop_theme_v1"/);
+  assert.match(page, /var activeTheme=localStorage\.getItem\(THEME_KEY\)\|\|"gold";/);
+  assert.match(page, /if\(activeTheme!=="gold"\)\{page\.classList\.add\("theme-"\+activeTheme\);\}/);
+  assert.match(page, /\.roulette-page\.theme-red /);
+  assert.match(page, /\.roulette-page\.theme-purple /);
+});
+
+test('renderLayout wires up the shop page: free-spin purchase, a capped/escalating payout-boost, and theme unlocks, all spending the shared credits balance', () => {
+  const page = renderLayout('<p>x</p>', {});
+  const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');
+  assert.ok(shopBlockStart > -1, 'the shop page must have its own guarded script block');
+  const shopBlock = page.slice(shopBlockStart);
+  assert.match(shopBlock, /var CREDITS_KEY="ja_trans_roulette_credits_v1";/, 'the shop must spend the same credits balance as the roulette pages');
+  assert.match(shopBlock, /var FREESPIN_COST=150;/);
+  assert.match(shopBlock, /var THEME_COST=300;/);
+  assert.match(shopBlock, /var PAYOUT_BOOST_MAX_LEVEL=5;/);
+  assert.match(shopBlock, /function payoutBoostCost\(level\)\{return PAYOUT_BOOST_BASE_COST\*Math\.pow\(2,level\);\}/, 'cost must escalate per level so the boost cannot trivially pay for itself');
+  assert.match(shopBlock, /if\(credits<FREESPIN_COST\)return;/);
+  assert.match(shopBlock, /if\(level>=PAYOUT_BOOST_MAX_LEVEL\)return;/);
+  assert.match(shopBlock, /if\(credits<cost\)return;/);
+  assert.match(shopBlock, /saveFreeSpins\(loadFreeSpins\(\)\+3\);/, 'buying free spins must add to the same persisted count the roulette pages read');
+});
+
 test('renderLayout tracks a hit streak (resetting on a miss) and can grant a free-spin bonus that skips the spin cost', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /var hitStreak=0/);
   assert.match(page, /hitStreak\+\+/);
   assert.match(page, /hitStreak=0/);
   assert.match(page, /roulette-streak-banner/);
-  assert.match(page, /var freeSpinsRemaining=0/);
-  assert.match(page, /freeSpinsRemaining\+=3/);
+  assert.match(page, /var freeSpinsRemaining=loadFreeSpins\(\);/);
+  assert.match(page, /setFreeSpins\(freeSpinsRemaining\+3\);/);
   assert.match(page, /フリースピンBONUS/);
-  assert.match(page, /if\(lastSpinUsedFreeSpin\)\{freeSpinsRemaining--;updateFreespinIndicator\(\);\}/);
+  assert.match(page, /if\(lastSpinUsedFreeSpin\)\{setFreeSpins\(freeSpinsRemaining-1\);\}/);
 });

@@ -20,6 +20,7 @@ var chatWidget = require('./views/chatWidget.js');
 var roulette = require('./lib/roulette.js');
 var backlogPool = require('./lib/backlogPool.js');
 var roulettePage = require('./views/roulettePage.js');
+var shopPage = require('./views/shopPage.js');
 var recommendGames = require('../scripts/recommend-games.js');
 var gamePool = require('../bot/lib/gamePool.js');
 var recommendPool = require('./lib/recommendPool.js');
@@ -121,6 +122,10 @@ app.get('/roulette/recommend', function (req, res) {
     spinEndpoint: '/api/roulette/recommend/spin'
   });
   res.send(layout.renderLayout(body, {}));
+});
+
+app.get('/shop', function (req, res) {
+  res.send(layout.renderLayout(shopPage.renderShopPage({}), {}));
 });
 
 var BACKLOG_MAX_MINUTES = 120;

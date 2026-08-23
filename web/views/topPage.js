@@ -13,7 +13,8 @@ function renderTopPage(data) {
   var parts = [];
 
   parts.push('<p class="roulette-links"><a href="/roulette/backlog">🎰 積みゲールーレット</a> ・ '
-    + '<a href="/roulette/recommend">🎰 おすすめルーレット</a></p>');
+    + '<a href="/roulette/recommend">🎰 おすすめルーレット</a> ・ '
+    + '<a href="/shop">🏪 ショップ</a></p>');
 
   parts.push('<section class="favorites">');
   parts.push('<h2>★ お気に入り</h2>');

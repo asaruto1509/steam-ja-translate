@@ -60,7 +60,7 @@ function renderRoulettePage(opts) {
     + '<button type="button" class="roulette-spin-btn">🎰 回す</button>'
     + '<div class="roulette-result" id="roulette-result"></div>'
     + '<p class="roulette-error" id="roulette-error"></p>'
-    + '<p><a href="/">' + backLinkText + '</a></p>'
+    + '<p><a href="/shop">🏪 ショップ</a> ・ <a href="/">' + backLinkText + '</a></p>'
     + '</section>';
 }
 
