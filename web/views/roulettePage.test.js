@@ -28,6 +28,14 @@ test('renderRoulettePage includes win-flash and miss-dim overlay elements', () =
   assert.match(html, /id="roulette-miss-dim"/);
 });
 
+test('renderRoulettePage includes a full-screen win overlay with rays, coin rain, and big text elements', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /id="roulette-win-overlay"/);
+  assert.match(html, /class="roulette-win-rays"/);
+  assert.match(html, /id="roulette-win-coin-rain"/);
+  assert.match(html, /id="roulette-win-overlay-text"/);
+});
+
 test('renderRoulettePage includes marquee bulbs around each reel and across the top of the cabinet', () => {
   const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
   assert.match(html, /class="roulette-marquee-top"/);

@@ -285,11 +285,32 @@ test('renderLayout places the double-up choice immediately after the payout amou
 
 test('renderLayout auto-cashes-out a pending double-up after a timeout, so the spin button cannot get stuck disabled forever if the user never taps a button', () => {
   const page = renderLayout('<p>x</p>', {});
-  assert.match(page, /var autoCashoutId=setTimeout\(function\(\)\{cashOut\(\);\},20000\)/);
+  assert.match(page, /var autoCashoutId=setTimeout\(function\(\)\{cashOut\(\);\},overlayDuration\+20000\)/);
   assert.match(page, /var doubleupDone=false/);
   assert.match(page, /function cashOut\(\)\{if\(doubleupDone\)return;/);
   assert.match(page, /function tryDouble\(guess\)\{if\(doubleupDone\)return;/);
   assert.match(page, /clearTimeout\(autoCashoutId\)/);
+});
+
+test('renderLayout gives a win a full-screen takeover overlay, tiered by payout size, with rays and coin rain', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-win-overlay\{/);
+  assert.match(page, /position:fixed;inset:0/);
+  assert.match(page, /function showWinOverlay\(text,rainCount,duration\)\{/);
+  assert.match(page, /var overlayText=megaJackpotHit\?"💎 MEGA JACKPOT!!":\(payout>=150\?"🎉 BIG WIN!!":"🎉 WIN!!"\)/);
+  assert.match(page, /var overlayRainCount=megaJackpotHit\?36:\(payout>=150\?24:14\)/);
+  assert.match(page, /var overlayDuration=megaJackpotHit\?3200:\(payout>=150\?2400:1600\)/);
+  assert.match(page, /showWinOverlay\(overlayText,overlayRainCount,overlayDuration\);/);
+  // the overlay call must happen before the payout amount is revealed, so it plays as the win lands
+  const overlayCallIndex = page.indexOf('showWinOverlay(overlayText,overlayRainCount,overlayDuration);');
+  const payoutElIndex = page.indexOf('resultEl.appendChild(payoutEl);');
+  assert.ok(overlayCallIndex > -1 && overlayCallIndex < payoutElIndex, 'overlay must be triggered as part of landing the win, before the result panel is revealed');
+});
+
+test('renderLayout keeps the coin resting visibly in the slot at idle, instead of invisible until the drop animation', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.doesNotMatch(page, /\.roulette-coin\{[^}]*opacity:0[^}]*\}/, 'the coin must not be invisible at rest');
+  assert.match(page, /@keyframes rouletteCoinIdleBob/);
 });
 
 test('renderLayout tracks a hit streak (resetting on a miss) and can grant a free-spin bonus that skips the spin cost', () => {
