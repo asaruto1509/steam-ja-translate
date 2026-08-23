@@ -100,3 +100,17 @@ test('renderIncrementalPage fetches the backlog roster and overrides tier names,
   assert.match(html, /var label=\(roster\[i\]&&roster\[i\]\.name\)\?roster\[i\]\.name:FALLBACK_NAMES\[i\];/);
   assert.match(html, /\}\)\.catch\(function\(\)\{\}\);/);
 });
+
+test('renderIncrementalPage lets the player exchange roulette credits for DP at a fixed one-way rate', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var EXCHANGE_RATE=10;/);
+  assert.match(html, /function loadRouletteCredits\(\)\{/);
+  assert.match(html, /var raw=Number\(localStorage\.getItem\(CREDITS_KEY\)\);/);
+  assert.match(html, /exchangeBtn\.addEventListener\("click",function\(\)\{/);
+  assert.match(html, /if\(amount>have\)\{/);
+  assert.match(html, /exchangeResultEl\.textContent="クレジットが足りません";/);
+  assert.match(html, /localStorage\.setItem\(CREDITS_KEY,String\(have-amount\)\);/);
+  assert.match(html, /addDp\(amount\/EXCHANGE_RATE\);/);
+  // DP→クレジットの逆交換が存在しないことを保証する(一方通行の設計制約)
+  assert.doesNotMatch(html, /localStorage\.getItem\(DP_KEY\)[^;]*CREDITS_KEY[^;]*setItem/);
+});
