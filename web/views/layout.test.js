@@ -321,7 +321,7 @@ test('renderLayout requires the player to tap the coin to insert it before a spi
   assert.match(insertCoinBody, /playCoinSound\(\);/);
   assert.match(page, /coinInsertEl\.addEventListener\("click",insertCoin\);/);
   // the gate lives inside startSpin itself, so both the button and the lever-drag path are covered
-  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim){'), page.indexOf('function startSpin(skipLeverAnim){') + 400);
+  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim,strength){'), page.indexOf('function startSpin(skipLeverAnim,strength){') + 440);
   assert.match(startSpinBody, /var usingFreeSpin=freeSpinsRemaining>0;/);
   assert.match(startSpinBody, /if\(!usingFreeSpin&&!coinInserted\)\{nudgeCoin\(\);return;\}/);
   assert.match(startSpinBody, /coinInserted=false;/, 'the coin must be consumed once a real (non-free) spin actually starts');
@@ -339,8 +339,8 @@ test('renderLayout shows a coin-insert prompt on the spin button when no coin is
 test('renderLayout lets the player drag the lever knob down to start a spin, as an alternative to the button', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /touch-action:none;cursor:grab/);
-  assert.match(page, /function startSpin\(skipLeverAnim\)\{/);
-  assert.match(page, /spinBtn\.addEventListener\("click",function\(\)\{startSpin\(false\);\}\);/);
+  assert.match(page, /function startSpin\(skipLeverAnim,strength\)\{/);
+  assert.match(page, /spinBtn\.addEventListener\("click",function\(\)\{startSpin\(false,1\);\}\);/);
   assert.match(page, /var LEVER_DRAG_MAX=200/);
   assert.match(page, /var LEVER_DRAG_THRESHOLD=130/);
   assert.match(page, /lever\.addEventListener\("pointerdown",function\(e\)\{/);
@@ -348,7 +348,8 @@ test('renderLayout lets the player drag the lever knob down to start a spin, as 
   assert.match(page, /lever\.addEventListener\("pointerup",leverDragEnd\)/);
   assert.match(page, /lever\.addEventListener\("pointercancel",function\(\)\{/);
   // dragging past the threshold on release must start a spin; short drags must not
-  assert.match(page, /if\(delta>=LEVER_DRAG_THRESHOLD&&!spinning\)\{startSpin\(true\);\}/);
+  assert.match(page, /if\(delta>=LEVER_DRAG_THRESHOLD&&!spinning\)\{/);
+  assert.match(page, /startSpin\(true,strengthRatio\);/);
   // a spin already in progress must block starting a new drag
   const pointerdownBody = page.slice(page.indexOf('lever.addEventListener("pointerdown"'), page.indexOf('lever.addEventListener("pointermove"'));
   assert.match(pointerdownBody, /if\(spinning\)return;/);
@@ -356,7 +357,7 @@ test('renderLayout lets the player drag the lever knob down to start a spin, as 
 
 test('renderLayout skips the automatic lever-pull CSS animation when the spin was already started by dragging the lever itself', () => {
   const page = renderLayout('<p>x</p>', {});
-  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim){'), page.indexOf('spinBtn.addEventListener("click"'));
+  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim,strength){'), page.indexOf('spinBtn.addEventListener("click"'));
   assert.match(startSpinBody, /if\(skipLeverAnim\)\{playLeverSound\(\);\}/);
   assert.match(startSpinBody, /else\{setTimeout\(function\(\)\{/);
 });
@@ -427,7 +428,7 @@ test('renderLayout tracks stats (spins, wins, streak, jackpots, doubleup, free-s
   assert.match(page, /bumpStat\("doubleupLosses",1\);/);
   assert.match(page, /bumpStat\("freeSpinBonuses",1\);/);
   const shopBlock = page.slice(shopBlockIndex);
-  assert.equal((shopBlock.match(/bumpStat\("shopPurchases",1\);/g) || []).length, 3, 'all three shop purchase paths (free spins, payout boost, theme unlock) must count toward the achievement');
+  assert.equal((shopBlock.match(/bumpStat\("shopPurchases",1\);/g) || []).length, 4, 'all shop purchase paths (free spins, payout boost, theme unlock, soundpack unlock) must count toward the achievement');
 });
 
 test('renderLayout wires up the shop page: free-spin purchase, a capped/escalating payout-boost, and theme unlocks, all spending the shared credits balance', () => {
@@ -500,4 +501,41 @@ test('renderLayout gives the credits counter a tabular/odometer-style punch anim
   assert.match(page, /\.roulette-credits\{font-variant-numeric:tabular-nums\}/);
   assert.match(page, /#roulette-credits-value\.punch\{animation:rouletteCreditsPunch/);
   assert.match(page, /creditsEl\.classList\.add\("punch"\);/);
+});
+
+test('renderLayout supports switchable soundpacks that alter tone waveform/pitch, plus a low-volume ambient BGM loop started on coin insert', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var SOUNDPACK_KEY="ja_trans_shop_soundpack_v1";/);
+  assert.match(page, /function loadSoundPack\(\)\{var v=localStorage\.getItem\(SOUNDPACK_KEY\);return \(v==="retro"\|\|v==="wafu"\)\?v:"default";\}/);
+  assert.match(page, /osc\.type=packWaveform\(type\|\|"sine"\);/);
+  assert.match(page, /osc\.frequency\.value=freq\*packPitch\(\);/);
+  assert.match(page, /function startAmbientLoop\(\)\{/);
+  assert.match(page, /function insertCoin\(\)\{[\s\S]{0,300}startAmbientLoop\(\);/);
+});
+
+test('renderLayout lets the shop adjust screen-shake intensity, applied via a CSS custom property scaled by lever-pull strength', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var SHAKE_KEY="ja_trans_shop_shake_v1";/);
+  assert.match(page, /function loadShakeIntensity\(\)\{var v=Number\(localStorage\.getItem\(SHAKE_KEY\)\);return \(v===0\.5\|\|v===1\|\|v===1\.5\)\?v:1;\}/);
+  assert.match(page, /translateX\(calc\(-8px \* var\(--shake-intensity,1\)\)\)/);
+  assert.match(page, /page\.style\.setProperty\("--shake-intensity",\(baseShakeIntensity\*spinEffectStrength\)\.toFixed\(2\)\);/);
+});
+
+test('renderLayout scales the lever-pull strength (0.6-1.4) by how far the knob was dragged, feeding the win-overlay rain count', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var spinEffectStrength=1;/);
+  assert.match(page, /var strengthRatio=Math\.max\(0\.6,Math\.min\(1\.4,0\.6\+\(delta\/LEVER_DRAG_MAX\)\*0\.8\)\);/);
+  assert.match(page, /spinEffectStrength=strength\|\|1;/);
+  assert.match(page, /overlayRainCount=Math\.round\(overlayRainCount\*spinEffectStrength\);/);
+});
+
+test('renderLayout wires up the shop soundpack and shake-intensity controls, with soundpack unlocks counting toward the shop-purchase achievement', () => {
+  const page = renderLayout('<p>x</p>', {});
+  const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');
+  const shopBlock = page.slice(shopBlockStart);
+  assert.match(shopBlock, /var SOUNDPACK_COST=250;/);
+  assert.match(shopBlock, /function renderSoundpackItem\(\)\{/);
+  assert.match(shopBlock, /function renderShakeItem\(\)\{/);
+  assert.match(shopBlock, /saveActiveSoundPack\(id\);/);
+  assert.match(shopBlock, /saveShakeIntensity\(v\);/);
 });

@@ -21,6 +21,18 @@ test('renderShopPage includes the free-spins, payout-boost, and theme shop items
   assert.match(html, /id="shop-theme-purple"/);
 });
 
+test('renderShopPage includes soundpack and shake-intensity items', () => {
+  const html = renderShopPage();
+  assert.match(html, /data-item="soundpack"/);
+  assert.match(html, /id="shop-soundpack-default"/);
+  assert.match(html, /id="shop-soundpack-retro"/);
+  assert.match(html, /id="shop-soundpack-wafu"/);
+  assert.match(html, /data-item="shake"/);
+  assert.match(html, /id="shop-shake-weak"/);
+  assert.match(html, /id="shop-shake-normal"/);
+  assert.match(html, /id="shop-shake-strong"/);
+});
+
 test('renderShopPage includes a stats summary and achievements grid', () => {
   const html = renderShopPage();
   assert.match(html, /id="stats-summary"/);
