@@ -114,3 +114,16 @@ test('renderIncrementalPage lets the player exchange roulette credits for DP at 
   // One-way constraint: CREDITS_KEY is written exactly once (deduction), never for reverse conversion
   assert.equal((html.match(/setItem\(CREDITS_KEY/g) || []).length, 1);
 });
+
+test('renderIncrementalPage lets the player prestige-reset dp/owned for a permanent multiplier based on lifetime DP', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var PRESTIGE_COEF=0\.1;/);
+  assert.match(html, /var PRESTIGE_DIVISOR=1000000;/);
+  assert.match(html, /prestigeBtn\.addEventListener\("click",function\(\)\{/);
+  assert.match(html, /if\(!window\.confirm\(/);
+  assert.match(html, /dp=0;/);
+  assert.match(html, /owned=new Array\(TIER_COUNT\)\.fill\(0\);/);
+  assert.match(html, /prestigeMult=1\+PRESTIGE_COEF\*Math\.sqrt\(lifetimeDp\/PRESTIGE_DIVISOR\);/);
+  // 累計DP(lifetimeDp)自体はプレステージでリセットしない(倍率計算の根拠として残す)
+  assert.doesNotMatch(html, /lifetimeDp=0;/);
+});
