@@ -113,8 +113,14 @@ test('renderLayout includes a decorative slot-machine lever styled and animated 
 
 test('renderLayout stops each reel with a staggered delay and waits for all three before revealing the result', () => {
   const page = renderLayout('<p>x</p>', {});
-  assert.match(page, /var STAGGER=\[0,400,800\]/);
+  assert.match(page, /var STAGGER=\[0,500,1000\]/);
   assert.match(page, /if\(doneCount===reels\.length\)/);
+});
+
+test('renderLayout gives the third reel a longer spin duration than the first two, so the payoff after リーチ gets real dwell time', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var REEL_DURATIONS=\[2,2,3\.2\]/);
+  assert.match(page, /landReel\(reel,candidates,reelIndexes\[i\],REEL_DURATIONS\[i\]\|\|2,/);
 });
 
 test('renderLayout renders a miss banner when the spin result is not a hit, without revealing a game', () => {
