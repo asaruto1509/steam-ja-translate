@@ -137,14 +137,10 @@ test('renderLayout renders a miss banner but still recommends a consolation game
   assert.doesNotMatch(missBranch, /setCredits\(credits\+/, 'a miss must not credit any payout');
 });
 
-test('renderLayout drops a coin into the slot before the lever pulls, and plays synthesized sound effects on spin, reel stop, reach, win, and miss', () => {
+test('renderLayout plays synthesized sound effects on spin, reel stop, reach, win, and miss', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /\.roulette-coin\{/);
   assert.match(page, /\.roulette-coin\.dropping\{/);
-  assert.match(page, /coin\.classList\.add\("dropping"\)/);
-  const coinIndex = page.indexOf('coin.classList.add("dropping")');
-  const leverIndex = page.indexOf('lever.classList.add("pulled")');
-  assert.ok(coinIndex > -1 && leverIndex > -1 && coinIndex < leverIndex, 'coin drop must be triggered before the lever pull');
   const coinImgUrlIndex = page.indexOf('var coinImgUrl=coin?coin.getAttribute("src"):""');
   assert.ok(coinImgUrlIndex > -1, 'payout coins must reuse the real coin image src, not a CSS-drawn circle');
   assert.match(page, /function playCoinSound\(\)/);
@@ -221,7 +217,8 @@ test('renderLayout charges 15 credits per spin, refunding it (or a spent free sp
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /var SPIN_COST=15/);
   assert.match(page, /var lastSpinUsedFreeSpin=false/);
-  assert.match(page, /lastSpinUsedFreeSpin=freeSpinsRemaining>0/);
+  assert.match(page, /var usingFreeSpin=freeSpinsRemaining>0;/);
+  assert.match(page, /lastSpinUsedFreeSpin=usingFreeSpin;/);
   const spendIndex = page.indexOf('else{setCredits(credits-SPIN_COST);}');
   const refundIndex = page.indexOf('else{setCredits(credits+SPIN_COST);}');
   assert.ok(spendIndex > -1, 'must deduct SPIN_COST on a normal (non-free) spin');
@@ -311,6 +308,32 @@ test('renderLayout keeps the coin resting visibly in the slot at idle, instead o
   const page = renderLayout('<p>x</p>', {});
   assert.doesNotMatch(page, /\.roulette-coin\{[^}]*opacity:0[^}]*\}/, 'the coin must not be invisible at rest');
   assert.match(page, /@keyframes rouletteCoinIdleBob/);
+});
+
+test('renderLayout requires the player to tap the coin to insert it before a spin can start, unless a free spin is available', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var coinInserted=false/);
+  assert.match(page, /function insertCoin\(\)\{/);
+  const insertCoinBody = page.slice(page.indexOf('function insertCoin(){'), page.indexOf('function insertCoin(){') + 260);
+  assert.match(insertCoinBody, /if\(spinning\|\|coinInserted\)return;/);
+  assert.match(insertCoinBody, /coinInserted=true;/);
+  assert.match(insertCoinBody, /coin\.classList\.remove\("dropping"\);coin\.offsetHeight;coin\.classList\.add\("dropping"\);/, 'the coin-drop animation must move to the insert action, not stay in startSpin');
+  assert.match(insertCoinBody, /playCoinSound\(\);/);
+  assert.match(page, /coinInsertEl\.addEventListener\("click",insertCoin\);/);
+  // the gate lives inside startSpin itself, so both the button and the lever-drag path are covered
+  const startSpinBody = page.slice(page.indexOf('function startSpin(skipLeverAnim){'), page.indexOf('function startSpin(skipLeverAnim){') + 400);
+  assert.match(startSpinBody, /var usingFreeSpin=freeSpinsRemaining>0;/);
+  assert.match(startSpinBody, /if\(!usingFreeSpin&&!coinInserted\)\{nudgeCoin\(\);return;\}/);
+  assert.match(startSpinBody, /coinInserted=false;/, 'the coin must be consumed once a real (non-free) spin actually starts');
+  assert.doesNotMatch(startSpinBody, /coin\.classList\.add\("dropping"\)/, 'the coin drop must no longer fire from inside startSpin');
+});
+
+test('renderLayout shows a coin-insert prompt on the spin button when no coin is inserted, and resets it after a spin resolves or fails', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /function updateSpinBtnLabel\(\)\{/);
+  const labelBody = page.slice(page.indexOf('function updateSpinBtnLabel(){'), page.indexOf('function updateSpinBtnLabel(){') + 160);
+  assert.match(labelBody, /spinBtn\.textContent=\(freeSpinsRemaining>0\|\|coinInserted\)\?"🎰 回す":"🪙 コインを入れてね";/);
+  assert.match(page, /function resetButton\(\)\{spinning=false;spinBtn\.disabled=false;if\(coin\)\{coin\.classList\.remove\("dropping"\);\}updateSpinBtnLabel\(\);\}/);
 });
 
 test('renderLayout lets the player drag the lever knob down to start a spin, as an alternative to the button', () => {
