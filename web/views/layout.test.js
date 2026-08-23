@@ -123,3 +123,11 @@ test('renderLayout renders a miss banner when the spin result is not a hit, with
   assert.match(page, /ハズレ/);
   assert.match(page, /spin\(d\.candidates,d\.hit,d\.reelIndexes\)/);
 });
+
+test('renderLayout triggers a reach effect when the first two reels already match, and clears it once all reels land', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-reach-banner\{/);
+  assert.match(page, /\.roulette-reel-wrap\.reaching\{/);
+  assert.match(page, /if\(i===1&&reelIndexes\[0\]===reelIndexes\[1\]\)\{showReach\(\);\}/);
+  assert.match(page, /hideReach\(\);onAllLanded/);
+});

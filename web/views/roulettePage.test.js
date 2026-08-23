@@ -22,6 +22,11 @@ test('renderRoulettePage includes three reels, markers, spin button, and result/
   assert.match(html, /id="roulette-error"/);
 });
 
+test('renderRoulettePage includes a reach banner element for the 2-of-3 tension effect', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /id="roulette-reach"/);
+});
+
 test('renderRoulettePage includes a decorative lever handle beside the reel', () => {
   const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
   assert.match(html, /class="roulette-lever"/);

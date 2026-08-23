@@ -14,6 +14,7 @@ function renderRoulettePage(opts) {
   }).join('');
   return '<section class="roulette-page" data-spin-endpoint="' + spinEndpoint + '">'
     + '<h2>' + title + '</h2>'
+    + '<div class="roulette-reach-banner" id="roulette-reach"></div>'
     + '<div class="roulette-machine">'
     + '<div class="roulette-reels">' + reelsHtml + '</div>'
     + '<div class="roulette-lever" aria-hidden="true">'
