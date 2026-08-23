@@ -248,9 +248,9 @@ test('renderLayout offers a double-up gamble after a win before crediting the pa
   // the payout must NOT be credited immediately on a win - only via cashOut() or a doubled win
   const winBranchStart = page.indexOf('if(hit){');
   const doubleupStart = page.indexOf('var doubleupDiv=document.createElement');
-  const immediateCreditIndex = page.indexOf('setCredits(credits+payout)');
   assert.ok(winBranchStart > -1 && doubleupStart > winBranchStart, 'double-up UI must be part of the hit branch');
-  assert.equal(immediateCreditIndex, -1, 'payout must not be auto-credited before the double-up choice');
+  const preDoubleupWinVisuals = page.slice(winBranchStart, doubleupStart);
+  assert.doesNotMatch(preDoubleupWinVisuals, /setCredits\(credits\+payout\)/, 'payout must not be auto-credited before the double-up choice');
 });
 
 test('renderLayout does not re-enable the spin button until a pending double-up (and any bonus round after it) is resolved', () => {
@@ -627,6 +627,35 @@ test('renderLayout occasionally offers a pick-a-card bonus round after a double-
   // the auto-resolve safety timeout must exist so the spin button cannot get stuck disabled forever
   assert.match(page, /var autoPickId=setTimeout\(function\(\)\{/);
   assert.match(page, /clearTimeout\(autoPickId\);/);
+});
+
+test('renderLayout offers a wheel-of-fortune side game with negative expected value relative to its cost', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var WHEEL_COST=20;/);
+  assert.match(page, /var WHEEL_VALUES=\[0,0\.5,1,0\.5,1\.5,1,2,0\];/);
+  assert.match(page, /if\(wheelSpinning\|\|credits<WHEEL_COST\)return;/);
+  assert.match(page, /setCredits\(credits-WHEEL_COST\);/);
+  assert.match(page, /var payout=Math\.round\(WHEEL_COST\*mult\);/);
+  assert.match(page, /if\(payout>0\)\{setCredits\(credits\+payout\);/);
+  // average multiplier across the 8 equally-likely wedges must stay below 1x (house edge)
+  const values = [0, 0.5, 1, 0.5, 1.5, 1, 2, 0];
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  assert.ok(avg < 1, 'wheel EV must be negative so it cannot fund itself');
+});
+
+test('renderLayout offers a purchasable scratch card with a negative expected value relative to its cost', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var SCRATCH_COST=15;/);
+  assert.match(page, /var SCRATCH_SYMBOLS=\["🍒","🍋","🔔","💎","7️⃣"\];/);
+  assert.match(page, /if\(credits<SCRATCH_COST\)return;/);
+  assert.match(page, /setCredits\(credits-SCRATCH_COST\);/);
+  assert.match(page, /var payout=allSame\?SCRATCH_COST\*5:\(twoSame\?SCRATCH_COST:0\);/);
+  // 5 symbols, 3 independent picks: P(3-match)=5/125=0.04, P(2-match)=1-0.04-P(all distinct, 60/125=0.48)=0.48
+  const pAllSame = 5 / 125;
+  const pAllDistinct = (5 * 4 * 3) / 125;
+  const pTwoSame = 1 - pAllSame - pAllDistinct;
+  const ev = pAllSame * 5 + pTwoSame * 1;
+  assert.ok(ev < 1, 'scratch card EV must be negative so it cannot fund itself');
 });
 
 test('renderLayout wires up the shop coin-skin and lever-skin controls with escalating unlock costs', () => {

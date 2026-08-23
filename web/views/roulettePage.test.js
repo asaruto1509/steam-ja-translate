@@ -83,6 +83,16 @@ test('renderRoulettePage includes a diagonal-line side-bet checkbox', () => {
   assert.match(html, /id="roulette-multiline-checkbox"/);
 });
 
+test('renderRoulettePage includes a wheel-of-fortune side game and a scratch-card side game', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /id="roulette-wheel"/);
+  assert.match(html, /id="roulette-wheel-btn"/);
+  assert.match(html, /id="roulette-wheel-result"/);
+  assert.match(html, /id="roulette-scratch-btn"/);
+  assert.match(html, /id="roulette-scratch-cells"/);
+  assert.match(html, /id="roulette-scratch-result"/);
+});
+
 test('renderRoulettePage escapes the title', () => {
   const html = renderRoulettePage({ title: '<script>alert(1)</script>', spinEndpoint: '/api/y' });
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
