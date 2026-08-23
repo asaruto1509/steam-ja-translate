@@ -123,11 +123,18 @@ test('renderLayout gives the third reel a longer spin duration than the first tw
   assert.match(page, /landReel\(reel,candidates,reelIndexes\[i\],REEL_DURATIONS\[i\]\|\|2,/);
 });
 
-test('renderLayout renders a miss banner when the spin result is not a hit, without revealing a game', () => {
+test('renderLayout renders a miss banner but still recommends a consolation game, without any payout', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /roulette-miss-banner/);
   assert.match(page, /ハズレ/);
   assert.match(page, /spin\(d\.candidates,d\.hit,d\.reelIndexes\)/);
+  const missBranchStart = page.indexOf('}else{playMissSound();');
+  const missBranchEnd = page.indexOf('resultEl.offsetHeight;', missBranchStart);
+  const missBranch = page.slice(missBranchStart, missBranchEnd);
+  assert.match(missBranch, /var consolation=candidates\[reelIndexes\[0\]\]/, 'a miss must still pick a game to recommend');
+  assert.match(missBranch, /makeImg\(consolation\.imageUrl,consolation\.name\)/);
+  assert.match(missBranch, /"\/analyze\?name="\+encodeURIComponent\(consolation\.name\)/);
+  assert.doesNotMatch(missBranch, /setCredits\(credits\+/, 'a miss must not credit any payout');
 });
 
 test('renderLayout drops a coin into the slot before the lever pulls, and plays synthesized sound effects on spin, reel stop, reach, win, and miss', () => {
@@ -264,6 +271,25 @@ test('renderLayout does not re-enable the spin button until a pending double-up 
   // the win-visuals block (before doubleupDiv is built) must not itself call resetButton
   const preDoubleupBlock = hitBranch.slice(0, hitBranch.indexOf('var doubleupDiv'));
   assert.doesNotMatch(preDoubleupBlock, /resetButton\(\);/);
+});
+
+test('renderLayout places the double-up choice immediately after the payout amount, before the winner banner/image, so it is reachable without scrolling past game details', () => {
+  const page = renderLayout('<p>x</p>', {});
+  const hitBranchStart = page.indexOf('if(hit){');
+  const payoutAppendIndex = page.indexOf('resultEl.appendChild(payoutEl);', hitBranchStart);
+  const doubleupIndex = page.indexOf('var doubleupDiv=document.createElement', hitBranchStart);
+  const winnerBannerIndex = page.indexOf('banner.className="roulette-winner-banner"', hitBranchStart);
+  assert.ok(payoutAppendIndex > -1 && doubleupIndex > payoutAppendIndex, 'double-up UI must be built right after the payout amount is shown');
+  assert.ok(winnerBannerIndex > doubleupIndex, 'the winner banner/image must come after the double-up UI, not before it');
+});
+
+test('renderLayout auto-cashes-out a pending double-up after a timeout, so the spin button cannot get stuck disabled forever if the user never taps a button', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var autoCashoutId=setTimeout\(function\(\)\{cashOut\(\);\},20000\)/);
+  assert.match(page, /var doubleupDone=false/);
+  assert.match(page, /function cashOut\(\)\{if\(doubleupDone\)return;/);
+  assert.match(page, /function tryDouble\(guess\)\{if\(doubleupDone\)return;/);
+  assert.match(page, /clearTimeout\(autoCashoutId\)/);
 });
 
 test('renderLayout tracks a hit streak (resetting on a miss) and can grant a free-spin bonus that skips the spin cost', () => {
