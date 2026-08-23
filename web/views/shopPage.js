@@ -91,6 +91,8 @@ function renderShopPage(opts) {
     + '<h2>📊 統計・実績</h2>'
     + '<div class="stats-summary" id="stats-summary"></div>'
     + '<div class="achievements-grid" id="achievements-grid"></div>'
+    + '<h2>⚙️ データ管理</h2>'
+    + '<button type="button" class="shop-reset-btn" id="shop-reset-data">🗑️ ルーレットのデータをすべてリセット</button>'
     + '<p><a href="/">' + backLinkText + '</a></p>'
     + '</section>';
 }

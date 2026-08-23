@@ -552,6 +552,37 @@ test('renderLayout wires up the shop soundpack and shake-intensity controls, wit
   assert.match(shopBlock, /saveShakeIntensity\(v\);/);
 });
 
+test('renderLayout marks not-yet-purchased shop options with a lock icon and price, not just the affordability-based disabled state', () => {
+  const page = renderLayout('<p>x</p>', {});
+  const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');
+  const shopBlock = page.slice(shopBlockStart);
+  assert.match(shopBlock, /function applyLockedLabel\(btn,label,isUnlocked,cost\)\{/);
+  assert.match(shopBlock, /btn\.classList\.toggle\("locked",!isUnlocked\);/);
+  assert.match(shopBlock, /btn\.textContent=isUnlocked\?label:label\+" 🔒"\+cost;/);
+  assert.match(shopBlock, /applyLockedLabel\(btn,THEME_LABELS\[id\],isUnlocked,THEME_COST\);/);
+  assert.match(shopBlock, /applyLockedLabel\(btn,SOUNDPACK_LABELS\[id\],isUnlocked,SOUNDPACK_COST\);/);
+  assert.match(shopBlock, /applyLockedLabel\(btn,COINSKIN_LABELS\[id\],isUnlocked,COINSKIN_COST\);/);
+  assert.match(shopBlock, /applyLockedLabel\(btn,LEVERSKIN_LABELS\[id\],isUnlocked,LEVERSKIN_COST\);/);
+  assert.match(page, /\.shop-theme-btn\.locked\{/);
+});
+
+test('renderLayout wires a data-reset button that confirms, clears every roulette/shop localStorage key, and reloads', () => {
+  const page = renderLayout('<p>x</p>', {});
+  const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');
+  const shopBlock = page.slice(shopBlockStart);
+  assert.match(shopBlock, /var resetBtn=page\.querySelector\("#shop-reset-data"\);/);
+  assert.match(shopBlock, /if\(!window\.confirm\(/);
+  assert.match(shopBlock, /RESET_KEYS\.forEach\(function\(k\)\{localStorage\.removeItem\(k\);\}\);/);
+  assert.match(shopBlock, /location\.reload\(\);/);
+  // must cover every persisted key, not just credits
+  ['CREDITS_KEY', 'PAYOUT_BOOST_KEY', 'THEME_KEY', 'THEME_UNLOCKED_KEY', 'SOUNDPACK_KEY', 'SOUNDPACK_UNLOCKED_KEY',
+    'COINSKIN_KEY', 'COINSKIN_UNLOCKED_KEY', 'LEVERSKIN_KEY', 'LEVERSKIN_UNLOCKED_KEY', 'SHAKE_KEY'].forEach((key) => {
+    assert.match(shopBlock, new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `RESET_KEYS must include ${key}`);
+  });
+  assert.match(shopBlock, /"ja_trans_stats_v1"/);
+  assert.match(shopBlock, /"ja_trans_achievements_v1"/);
+});
+
 test('renderLayout wires up the shop coin-skin and lever-skin controls with escalating unlock costs', () => {
   const page = renderLayout('<p>x</p>', {});
   const shopBlockStart = page.indexOf('document.querySelectorAll(".shop-page")');

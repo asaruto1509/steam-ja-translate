@@ -51,6 +51,11 @@ test('renderShopPage includes a stats summary and achievements grid', () => {
   assert.match(html, /id="achievements-grid"/);
 });
 
+test('renderShopPage includes a data-reset button', () => {
+  const html = renderShopPage();
+  assert.match(html, /id="shop-reset-data"/);
+});
+
 test('renderShopPage uses a default back-link text when not provided', () => {
   const html = renderShopPage();
   assert.match(html, /トップに戻る/);
