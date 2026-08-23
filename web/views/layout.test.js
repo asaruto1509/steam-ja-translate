@@ -185,6 +185,24 @@ test('renderLayout gives a miss its own effect: machine shake and a dim flash', 
   assert.match(page, /missDimEl\.classList\.add\("flash"\)/);
 });
 
+test('renderLayout includes a persistent credit/bet HUD backed by localStorage, deducting on spin and paying out on a win', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /\.roulette-hud\{/);
+  assert.match(page, /CREDITS_KEY="ja_trans_roulette_credits_v1"/);
+  assert.match(page, /var SPIN_COST=10/);
+  assert.match(page, /setCredits\(credits-SPIN_COST\)/);
+  assert.match(page, /setCredits\(credits\+payout\)/);
+  assert.match(page, /function animateNumber\(/);
+  assert.match(page, /roulette-payout-amount/);
+  assert.match(page, /if\(stored===null\)return 1000/);
+});
+
+test('renderLayout decorates the cabinet background with a subtle card-suit pattern', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /data:image\/svg\+xml/);
+  assert.match(page, /background-repeat:repeat,no-repeat/);
+});
+
 test('renderLayout triggers a reach effect when the first two reels already match, and clears it once all reels land', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /\.roulette-reach-banner\{/);

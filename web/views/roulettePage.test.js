@@ -43,6 +43,13 @@ test('renderRoulettePage includes a prominent coin-insert element above the mach
   assert.match(html, /<img class="roulette-coin"[^>]*src="https:\/\/cdn\.jsdelivr\.net\/gh\/jdecked\/twemoji/);
 });
 
+test('renderRoulettePage includes a credits/bet HUD', () => {
+  const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
+  assert.match(html, /class="roulette-hud"/);
+  assert.match(html, /id="roulette-credits-value"/);
+  assert.match(html, /id="roulette-bet-value"/);
+});
+
 test('renderRoulettePage includes a reach banner element for the 2-of-3 tension effect', () => {
   const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
   assert.match(html, /id="roulette-reach"/);
