@@ -51,3 +51,29 @@ test('renderIncrementalPage uses a custom back-link text when provided', () => {
   assert.match(html, /一覧へ/);
   assert.doesNotMatch(html, /トップに戻る/);
 });
+
+test('renderIncrementalPage computes per-tier output and total output scaled by prestige, and ticks every second', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var TIER_BASE_OUTPUT=0\.1;/);
+  assert.match(html, /var TIER_OUTPUT_TIER_MULT=6;/);
+  assert.match(html, /function tierBaseOutput\(i\)\{return TIER_BASE_OUTPUT\*Math\.pow\(TIER_OUTPUT_TIER_MULT,i\);\}/);
+  assert.match(html, /function totalOutputPerSec\(\)\{/);
+  assert.match(html, /sum\*prestigeMult;/);
+  assert.match(html, /setInterval\(function\(\)\{/);
+  assert.match(html, /addDp\(totalOutputPerSec\(\)\);/);
+});
+
+test('renderIncrementalPage grants capped offline progress based on elapsed time since lastTick, and shows a welcome-back message', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var OFFLINE_CAP_SECONDS=28800;/);
+  assert.match(html, /var elapsedSec=Math\.max\(0,Math\.min\(OFFLINE_CAP_SECONDS,\(nowMs-lastTick\)\/1000\)\);/);
+  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec;/);
+  assert.match(html, /welcomeEl\.textContent="おかえりなさい、\+"\+Math\.floor\(offlineGain\)\.toLocaleString\(\)\+" DP";/);
+});
+
+test('renderIncrementalPage adds DP on manual click, scaled by prestige', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var CLICK_BASE=1;/);
+  assert.match(html, /clickBtn\.addEventListener\("click",function\(\)\{/);
+  assert.match(html, /addDp\(CLICK_BASE\*prestigeMult\);/);
+});
