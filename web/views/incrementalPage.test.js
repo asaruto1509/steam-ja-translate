@@ -77,3 +77,17 @@ test('renderIncrementalPage adds DP on manual click, scaled by prestige', () => 
   assert.match(html, /clickBtn\.addEventListener\("click",function\(\)\{/);
   assert.match(html, /addDp\(CLICK_BASE\*prestigeMult\);/);
 });
+
+test('renderIncrementalPage computes exponential per-tier purchase cost and wires buy buttons', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var TIER_BASE_COST=15;/);
+  assert.match(html, /var TIER_COST_TIER_MULT=6;/);
+  assert.match(html, /var TIER_COST_GROWTH=1\.14;/);
+  assert.match(html, /function tierBaseCost\(i\)\{return TIER_BASE_COST\*Math\.pow\(TIER_COST_TIER_MULT,i\);\}/);
+  assert.match(html, /function tierCost\(i,ownedCount\)\{return tierBaseCost\(i\)\*Math\.pow\(TIER_COST_GROWTH,ownedCount\);\}/);
+  assert.match(html, /function renderTiers\(\)\{/);
+  assert.match(html, /tierEls\[i\]\.costEl\.textContent=Math\.ceil\(tierCost\(i,owned\[i\]\)\)\.toLocaleString\(\);/);
+  assert.match(html, /var cost=tierCost\(i,owned\[i\]\);/);
+  assert.match(html, /if\(dp<cost\)return;/);
+  assert.match(html, /owned\[i\]\+\+;/);
+});
