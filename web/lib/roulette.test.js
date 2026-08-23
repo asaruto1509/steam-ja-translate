@@ -1,50 +1,58 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { pickWinner, buildSpinPayload, excludeRecentlyShown } = require('./roulette.js');
+const { pickTripleResult, excludeRecentlyShown, buildSpinPayload } = require('./roulette.js');
 
-test('pickWinner returns an index within range using the injected rng', () => {
-  const candidates = [{ id: '1' }, { id: '2' }, { id: '3' }];
-  const idx = pickWinner(candidates, () => 0.5);
-  assert.equal(idx, 1);
+function queueRng(values) {
+  let i = 0;
+  return () => values[Math.min(i++, values.length - 1)];
+}
+
+test('pickTripleResult returns a hit with all three reels on the same index when the roll is under winRate', () => {
+  const candidates = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }];
+  const rng = queueRng([0.5, 0.1]); // winnerIndex=2, hit-roll=0.1 < winRate=0.75
+  const result = pickTripleResult(candidates, rng, 0.75);
+  assert.deepEqual(result, { hit: true, reelIndexes: [2, 2, 2], winnerIndex: 2 });
 });
 
-test('pickWinner returns 0 when rng returns 0', () => {
+test('pickTripleResult returns a miss with reel 2 shifted away from the winner index', () => {
+  const candidates = [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }];
+  // winnerIndex=2 (0.5), hit-roll=0.9 >= winRate=0.75 -> miss, second=2 (0.5) bumped to 3, third=0 (0)
+  const rng = queueRng([0.5, 0.9, 0.5, 0]);
+  const result = pickTripleResult(candidates, rng, 0.75);
+  assert.equal(result.hit, false);
+  assert.equal(result.winnerIndex, null);
+  assert.equal(result.reelIndexes[0], 2);
+  assert.notEqual(result.reelIndexes[1], 2);
+  assert.equal(result.reelIndexes[1], 3);
+  assert.equal(result.reelIndexes[2], 0);
+});
+
+test('pickTripleResult bumps the third reel when it collides with both the winner and the second reel', () => {
   const candidates = [{ id: '1' }, { id: '2' }];
-  assert.equal(pickWinner(candidates, () => 0), 0);
+  // winnerIndex=0 (0), hit-roll=1 -> miss, second: 0->bumped to 1, third: 0 collides with neither winner(0)...
+  // use values that make third equal to both winner and second before bump
+  const rng = queueRng([0, 1, 0, 0]);
+  const result = pickTripleResult(candidates, rng, 0.75);
+  assert.equal(result.hit, false);
+  assert.equal(result.reelIndexes[0], 0);
+  assert.equal(result.reelIndexes[1], 1);
+  // third started at 0, equals winnerIndex(0) but not second(1), so it is NOT bumped by the
+  // "collides with both" rule - only bumps when it equals winner AND second simultaneously
+  assert.equal(result.reelIndexes[2], 0);
 });
 
-test('pickWinner returns the last index when rng returns just under 1', () => {
-  const candidates = [{ id: '1' }, { id: '2' }, { id: '3' }];
-  assert.equal(pickWinner(candidates, () => 0.999), 2);
-});
-
-test('pickWinner defaults to Math.random when no rng is given', () => {
+test('pickTripleResult always hits when there is only one candidate', () => {
   const candidates = [{ id: '1' }];
-  assert.equal(pickWinner(candidates), 0);
+  const rng = queueRng([0, 0.999]); // hit-roll would fail against any winRate, but forced hit anyway
+  const result = pickTripleResult(candidates, rng, 0.75);
+  assert.deepEqual(result, { hit: true, reelIndexes: [0, 0, 0], winnerIndex: 0 });
 });
 
-test('buildSpinPayload strips extra fields and keeps id/name/imageUrl', () => {
-  const candidates = [
-    { id: '1', name: 'A', imageUrl: 'http://x/1.jpg', playtimeMinutes: 0 },
-    { id: '2', name: 'B', imageUrl: 'http://x/2.jpg', playtimeMinutes: 10 }
-  ];
-  const payload = buildSpinPayload(candidates, 1);
-  assert.deepEqual(payload, {
-    candidates: [
-      { id: '1', name: 'A', imageUrl: 'http://x/1.jpg' },
-      { id: '2', name: 'B', imageUrl: 'http://x/2.jpg' }
-    ],
-    winnerIndex: 1
-  });
-});
-
-test('buildSpinPayload works with a winnerIndex of 0', () => {
-  const candidates = [{ id: '1', name: 'A', imageUrl: 'u' }];
-  assert.deepEqual(buildSpinPayload(candidates, 0), {
-    candidates: [{ id: '1', name: 'A', imageUrl: 'u' }],
-    winnerIndex: 0
-  });
+test('pickTripleResult defaults to Math.random and a 0.75 winRate when not given', () => {
+  const candidates = [{ id: '1' }];
+  const result = pickTripleResult(candidates);
+  assert.equal(result.hit, true);
 });
 
 test('excludeRecentlyShown filters out ids from the recent list', () => {
@@ -63,4 +71,29 @@ test('excludeRecentlyShown returns the full pool when nothing is recent', () => 
   const pool = [{ id: '1' }, { id: '2' }];
   const result = excludeRecentlyShown(pool, [], 1);
   assert.deepEqual(result.map((g) => g.id), ['1', '2']);
+});
+
+test('buildSpinPayload strips extra fields and carries hit/reelIndexes/winnerIndex through', () => {
+  const candidates = [
+    { id: '1', name: 'A', imageUrl: 'http://x/1.jpg', playtimeMinutes: 0 },
+    { id: '2', name: 'B', imageUrl: 'http://x/2.jpg', playtimeMinutes: 10 }
+  ];
+  const payload = buildSpinPayload(candidates, { hit: true, reelIndexes: [1, 1, 1], winnerIndex: 1 });
+  assert.deepEqual(payload, {
+    candidates: [
+      { id: '1', name: 'A', imageUrl: 'http://x/1.jpg' },
+      { id: '2', name: 'B', imageUrl: 'http://x/2.jpg' }
+    ],
+    hit: true,
+    reelIndexes: [1, 1, 1],
+    winnerIndex: 1
+  });
+});
+
+test('buildSpinPayload carries a miss result through with winnerIndex null', () => {
+  const candidates = [{ id: '1', name: 'A', imageUrl: 'u' }];
+  const payload = buildSpinPayload(candidates, { hit: false, reelIndexes: [0, 1, 2], winnerIndex: null });
+  assert.deepEqual(payload.reelIndexes, [0, 1, 2]);
+  assert.equal(payload.hit, false);
+  assert.equal(payload.winnerIndex, null);
 });

@@ -13,10 +13,10 @@ test('renderRoulettePage sets data-spin-endpoint to the given endpoint', () => {
   assert.match(html, /data-spin-endpoint="\/api\/roulette\/backlog\/spin"/);
 });
 
-test('renderRoulettePage includes a reel container, marker, spin button, and result/error areas', () => {
+test('renderRoulettePage includes three reels, markers, spin button, and result/error areas', () => {
   const html = renderRoulettePage({ title: 'x', spinEndpoint: '/api/y' });
-  assert.match(html, /id="roulette-reel"/);
-  assert.match(html, /class="roulette-marker"/);
+  assert.equal((html.match(/class="roulette-reel"/g) || []).length, 3);
+  assert.equal((html.match(/class="roulette-marker"/g) || []).length, 3);
   assert.match(html, /class="roulette-spin-btn"/);
   assert.match(html, /id="roulette-result"/);
   assert.match(html, /id="roulette-error"/);

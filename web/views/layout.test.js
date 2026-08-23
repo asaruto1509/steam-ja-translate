@@ -110,3 +110,16 @@ test('renderLayout includes a decorative slot-machine lever styled and animated 
   assert.match(page, /@keyframes rouletteLeverKnobPull/);
   assert.match(page, /lever\.classList\.add\("pulled"\)/);
 });
+
+test('renderLayout stops each reel with a staggered delay and waits for all three before revealing the result', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /var STAGGER=\[0,400,800\]/);
+  assert.match(page, /if\(doneCount===reels\.length\)/);
+});
+
+test('renderLayout renders a miss banner when the spin result is not a hit, without revealing a game', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /roulette-miss-banner/);
+  assert.match(page, /ハズレ/);
+  assert.match(page, /spin\(d\.candidates,d\.hit,d\.reelIndexes\)/);
+});
