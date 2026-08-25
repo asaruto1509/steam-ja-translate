@@ -1,0 +1,99 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const skills = require('./incrementalSkills.js');
+
+test('SKILL_BRANCHES has exactly 3 branches with the documented node counts', () => {
+  assert.deepEqual(skills.BRANCH_ORDER, ['production', 'management', 'luck']);
+  assert.equal(skills.SKILL_BRANCHES.production.length, 7);
+  assert.equal(skills.SKILL_BRANCHES.management.length, 7);
+  assert.equal(skills.SKILL_BRANCHES.luck.length, 6);
+});
+
+test('every branch has non-decreasing node costs and ends with a unique-kind capstone', () => {
+  skills.BRANCH_ORDER.forEach((b) => {
+    const nodes = skills.SKILL_BRANCHES[b];
+    for (let i = 1; i < nodes.length; i++) {
+      assert.ok(nodes[i].cost >= nodes[i - 1].cost, `${b} node ${i} cost must not decrease`);
+    }
+    assert.equal(nodes[nodes.length - 1].kind, 'unique', `${b} must end with a unique-effect node`);
+  });
+});
+
+test('computeOutputMult sums only production outputMult nodes as unlocked levels increase', () => {
+  const none = { production: 0, management: 0, luck: 0 };
+  const some = { production: 2, management: 0, luck: 0 }; // both outputMult nodes (+0.05 each)
+  const withCostNode = { production: 3, management: 0, luck: 0 }; // + a costMult node, must not affect output
+  const all = { production: 7, management: 0, luck: 0 };
+  assert.equal(skills.computeOutputMult(none), 1);
+  assert.equal(skills.computeOutputMult(some), 1.1);
+  assert.equal(skills.computeOutputMult(withCostNode), 1.1);
+  assert.equal(Math.round(skills.computeOutputMult(all) * 100) / 100, 1.25);
+});
+
+test('computeCostMult sums only production costMult nodes', () => {
+  const all = { production: 7, management: 0, luck: 0 };
+  assert.equal(Math.round(skills.computeCostMult(all) * 100) / 100, 0.94);
+});
+
+test('computeClickMult sums only management clickMult nodes', () => {
+  const all = { production: 0, management: 7, luck: 0 };
+  assert.equal(skills.computeClickMult(all), 4);
+});
+
+test('computeOfflineBonusSeconds sums management offlineHours nodes in seconds', () => {
+  const all = { production: 0, management: 7, luck: 0 };
+  assert.equal(skills.computeOfflineBonusSeconds(all), 12 * 3600);
+});
+
+test('computeExchangeMult sums management exchangeMult nodes', () => {
+  const all = { production: 0, management: 7, luck: 0 };
+  assert.equal(Math.round(skills.computeExchangeMult(all) * 100) / 100, 1.1);
+});
+
+test('computeBonusIntervalMult sums luck bonusIntervalMult nodes and never drops below 0.2', () => {
+  const none = { production: 0, management: 0, luck: 0 };
+  const all = { production: 0, management: 0, luck: 6 };
+  assert.equal(skills.computeBonusIntervalMult(none), 1);
+  assert.equal(Math.round(skills.computeBonusIntervalMult(all) * 100) / 100, 0.6);
+});
+
+test('computeBonusValueMult sums luck bonusValueMult nodes', () => {
+  const all = { production: 0, management: 0, luck: 6 };
+  assert.equal(Math.round(skills.computeBonusValueMult(all) * 100) / 100, 1.5);
+});
+
+test('computePrestigeCoefMult sums luck prestigeCoefMult nodes', () => {
+  const all = { production: 0, management: 0, luck: 6 };
+  assert.equal(Math.round(skills.computePrestigeCoefMult(all) * 100) / 100, 1.2);
+});
+
+test('hasAutoBuy/hasOfflineBoost/hasAutoCollectBonus are true only when their branch is fully unlocked', () => {
+  const none = { production: 0, management: 0, luck: 0 };
+  const almostProd = { production: 6, management: 0, luck: 0 };
+  const fullProd = { production: 7, management: 0, luck: 0 };
+  const fullMgmt = { production: 0, management: 7, luck: 0 };
+  const fullLuck = { production: 0, management: 0, luck: 6 };
+  assert.equal(skills.hasAutoBuy(none), false);
+  assert.equal(skills.hasAutoBuy(almostProd), false);
+  assert.equal(skills.hasAutoBuy(fullProd), true);
+  assert.equal(skills.hasOfflineBoost(fullMgmt), true);
+  assert.equal(skills.hasAutoCollectBonus(fullLuck), true);
+});
+
+test('nextNodeCost returns the next unlockable node cost, or null when the branch is complete', () => {
+  const start = { production: 0, management: 0, luck: 0 };
+  const mid = { production: 3, management: 0, luck: 0 };
+  const done = { production: 7, management: 0, luck: 0 };
+  assert.equal(skills.nextNodeCost(start, 'production'), 1);
+  assert.equal(skills.nextNodeCost(mid, 'production'), 3);
+  assert.equal(skills.nextNodeCost(done, 'production'), null);
+});
+
+test('isNodeUnlockable checks both that a next node exists and the player can afford it', () => {
+  const start = { production: 0, management: 0, luck: 0 };
+  const done = { production: 7, management: 0, luck: 0 };
+  assert.equal(skills.isNodeUnlockable(start, 'production', 0), false);
+  assert.equal(skills.isNodeUnlockable(start, 'production', 1), true);
+  assert.equal(skills.isNodeUnlockable(done, 'production', 999), false);
+});
