@@ -175,6 +175,81 @@ var SKILL_STYLE = ''
   + '.incremental-skill-node-label{font-size:10px;font-weight:700;text-align:center}'
   + '.incremental-skill-node-cost{font-size:10px;font-weight:700;color:#8a6a3a}';
 
+function buildSkillClientScript() {
+  var pureFns = [
+    computeOutputMult, computeCostMult, computeClickMult, computeOfflineBonusSeconds,
+    computeExchangeMult, computeBonusIntervalMult, computeBonusValueMult, computePrestigeCoefMult,
+    hasAutoBuy, hasOfflineBoost, hasAutoCollectBonus, nextNodeCost, isNodeUnlockable
+  ];
+  var fnSrc = pureFns.map(function (f) { return f.toString(); }).join('');
+  return ''
+    + 'var SKILL_BRANCHES=' + JSON.stringify(SKILL_BRANCHES) + ';'
+    + 'var BRANCH_ORDER=' + JSON.stringify(BRANCH_ORDER) + ';'
+    + fnSrc
+    + 'var skillBeadEls={};'
+    + 'BRANCH_ORDER.forEach(function(b){'
+    + 'skillBeadEls[b]=SKILL_BRANCHES[b].map(function(n,i){return {'
+    + 'wrap:page.querySelector("#incremental-skill-node-"+b+"-"+i),'
+    + 'costEl:page.querySelector("#incremental-skill-cost-"+b+"-"+i)'
+    + '};});'
+    + '});'
+    + 'var spEl=page.querySelector("#incremental-sp-value");'
+    + 'function renderSp(){if(spEl)spEl.textContent=Math.floor(sp).toLocaleString();}'
+    + 'function renderSkillTree(){'
+    + 'BRANCH_ORDER.forEach(function(b){'
+    + 'var level=skillLevels[b];'
+    + 'SKILL_BRANCHES[b].forEach(function(n,i){'
+    + 'var el=skillBeadEls[b][i];'
+    + 'if(!el.wrap)return;'
+    + 'var state=i<level?"is-unlocked":(i===level?(sp>=n.cost?"is-affordable":"is-next"):"is-locked");'
+    + 'el.wrap.className="incremental-skill-node "+state;'
+    + 'if(el.costEl)el.costEl.textContent=i<level?"解放済み":(n.cost+" SP");'
+    + '});'
+    + '});'
+    + '}'
+    + 'renderSp();'
+    + 'renderSkillTree();'
+    + 'BRANCH_ORDER.forEach(function(b){'
+    + 'skillBeadEls[b].forEach(function(el,i){'
+    + 'if(!el.wrap)return;'
+    + 'el.wrap.addEventListener("click",function(){'
+    + 'if(!isNodeUnlockable(skillLevels,b,sp)||i!==skillLevels[b]){playDeniedSound();return;}'
+    + 'sp-=nextNodeCost(skillLevels,b);'
+    + 'skillLevels[b]=skillLevels[b]+1;'
+    + 'saveState();'
+    + 'renderSp();'
+    + 'renderSkillTree();'
+    + 'renderTiers();'
+    + 'renderIncome();'
+    + 'playBuySound();'
+    + '});'
+    + '});'
+    + '});'
+    + 'var researchBtn=page.querySelector("#incremental-research-btn");'
+    + 'var researchCostEl=page.querySelector("#incremental-research-cost");'
+    + 'var RESEARCH_BASE_COST=500;'
+    + 'var RESEARCH_COST_GROWTH=1.25;'
+    + 'function researchCost(){return Math.ceil(RESEARCH_BASE_COST*Math.pow(RESEARCH_COST_GROWTH,researchUses));}'
+    + 'function renderResearchCost(){if(researchCostEl)researchCostEl.textContent=researchCost().toLocaleString();}'
+    + 'renderResearchCost();'
+    + 'if(researchBtn){'
+    + 'researchBtn.addEventListener("click",function(){'
+    + 'var cost=researchCost();'
+    + 'if(dp<cost){playDeniedSound();return;}'
+    + 'dp-=cost;'
+    + 'sp+=1;'
+    + 'researchUses+=1;'
+    + 'saveState();'
+    + 'renderDp();'
+    + 'renderSp();'
+    + 'renderResearchCost();'
+    + 'renderSkillTree();'
+    + 'punchEl(dpEl);'
+    + 'playExchangeSound();'
+    + '});'
+    + '}';
+}
+
 module.exports = {
   SKILL_BRANCHES: SKILL_BRANCHES,
   BRANCH_ORDER: BRANCH_ORDER,
@@ -193,5 +268,6 @@ module.exports = {
   nextNodeCost: nextNodeCost,
   isNodeUnlockable: isNodeUnlockable,
   renderSkillPanelHtml: renderSkillPanelHtml,
-  SKILL_STYLE: SKILL_STYLE
+  SKILL_STYLE: SKILL_STYLE,
+  buildSkillClientScript: buildSkillClientScript
 };

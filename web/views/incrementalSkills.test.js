@@ -119,3 +119,18 @@ test('SKILL_STYLE styles the skill node beads and lock/unlock/affordable states'
   assert.match(skills.SKILL_STYLE, /\.incremental-skill-node\.is-affordable/);
   assert.match(skills.SKILL_STYLE, /\.incremental-skill-node\.is-locked/);
 });
+
+test('buildSkillClientScript embeds the pure functions by source and wires unlock/research buttons', () => {
+  const script = skills.buildSkillClientScript();
+  assert.match(script, /var SKILL_BRANCHES=\{"production":\[/);
+  assert.match(script, /var BRANCH_ORDER=\["production","management","luck"\];/);
+  assert.match(script, /function computeOutputMult\(skillLevels\)\s*\{/);
+  assert.match(script, /function hasAutoBuy\(skillLevels\)\s*\{/);
+  assert.match(script, /function nextNodeCost\(skillLevels,\s*branchId\)\s*\{/);
+  assert.match(script, /function renderSp\(\)\{/);
+  assert.match(script, /function renderSkillTree\(\)\{/);
+  assert.match(script, /var RESEARCH_BASE_COST=500;/);
+  assert.match(script, /var RESEARCH_COST_GROWTH=1\.25;/);
+  assert.match(script, /function researchCost\(\)\{return Math\.ceil\(RESEARCH_BASE_COST\*Math\.pow\(RESEARCH_COST_GROWTH,researchUses\)\);\}/);
+  assert.doesNotThrow(() => new Function(script), 'buildSkillClientScript output must be syntactically valid standalone JS');
+});

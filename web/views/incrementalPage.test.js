@@ -272,3 +272,14 @@ test('renderIncrementalPage loads and persists sp/skillLevels/researchUses state
   assert.doesNotMatch(prestigeHandlerMatch[0], /skillLevels=/);
   assert.doesNotMatch(prestigeHandlerMatch[0], /^sp=/m);
 });
+
+test('renderIncrementalPage splices the skill tree client script into the same IIFE as the rest of the page logic', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var SKILL_BRANCHES=\{"production":\[/);
+  assert.match(html, /function renderSkillTree\(\)\{/);
+  assert.match(html, /el\.wrap\.addEventListener\("click",function\(\)\{/);
+  assert.match(html, /id="incremental-research-btn"/);
+  const scriptMatch = html.match(/<script>([\s\S]*)<\/script>/);
+  assert.ok(scriptMatch);
+  assert.doesNotThrow(() => new Function(scriptMatch[1]));
+});

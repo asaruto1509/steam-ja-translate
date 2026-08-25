@@ -376,6 +376,7 @@ var CLIENT_SCRIPT = ''
   + 'playPrestigeSound();'
   + '});'
   + '}'
+  + incrementalSkills.buildSkillClientScript()
   + 'var bonusZone=page.querySelector("#incremental-bonus-zone");'
   + 'var bonusResultEl=page.querySelector("#incremental-bonus-result");'
   + 'var bonusEl=null;'
