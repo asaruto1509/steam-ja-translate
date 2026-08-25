@@ -253,3 +253,22 @@ test('renderIncrementalPage includes the skill tree panel from incrementalSkills
   assert.match(html, /id="incremental-skill-node-luck-0"/);
   assert.match(html, /\.incremental-skill-node-bead\{/);
 });
+
+test('renderIncrementalPage loads and persists sp/skillLevels/researchUses state, never resetting them on prestige', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var SP_KEY="ja_trans_incremental_sp_v1";/);
+  assert.match(html, /var SKILLS_KEY="ja_trans_incremental_skills_v1";/);
+  assert.match(html, /var RESEARCH_USES_KEY="ja_trans_incremental_research_uses_v1";/);
+  assert.match(html, /var sp=loadNumber\(SP_KEY,0\);/);
+  assert.match(html, /var researchUses=loadNumber\(RESEARCH_USES_KEY,0\);/);
+  assert.match(html, /function loadSkillLevels\(\)\{/);
+  assert.match(html, /var skillLevels=loadSkillLevels\(\);/);
+  assert.match(html, /localStorage\.setItem\(SP_KEY,String\(sp\)\);/);
+  assert.match(html, /localStorage\.setItem\(SKILLS_KEY,JSON\.stringify\(skillLevels\)\);/);
+  assert.match(html, /localStorage\.setItem\(RESEARCH_USES_KEY,String\(researchUses\)\);/);
+  // prestige handler must not touch sp/skillLevels/researchUses
+  const prestigeHandlerMatch = html.match(/prestigeBtn\.addEventListener\("click",function\(\)\{[\s\S]*?\}\);/);
+  assert.ok(prestigeHandlerMatch, 'expected to find the prestige click handler');
+  assert.doesNotMatch(prestigeHandlerMatch[0], /skillLevels=/);
+  assert.doesNotMatch(prestigeHandlerMatch[0], /^sp=/m);
+});
