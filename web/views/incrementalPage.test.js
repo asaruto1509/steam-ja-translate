@@ -54,7 +54,7 @@ test('renderIncrementalPage uses a custom back-link text when provided', () => {
 
 test('renderIncrementalPage computes per-tier output and total output scaled by prestige, and ticks every second', () => {
   const html = renderIncrementalPage({});
-  assert.match(html, /var TIER_BASE_OUTPUT=0\.1;/);
+  assert.match(html, /var TIER_BASE_OUTPUT=0\.5;/);
   assert.match(html, /var TIER_OUTPUT_TIER_MULT=6;/);
   assert.match(html, /function tierBaseOutput\(i\)\{return TIER_BASE_OUTPUT\*Math\.pow\(TIER_OUTPUT_TIER_MULT,i\);\}/);
   assert.match(html, /function totalOutputPerSec\(\)\{/);
@@ -89,7 +89,7 @@ test('renderIncrementalPage computes exponential per-tier purchase cost and wire
   assert.match(html, /function renderTiers\(\)\{/);
   assert.match(html, /tierEls\[i\]\.costEl\.textContent=Math\.ceil\(tierCost\(i,owned\[i\]\)\)\.toLocaleString\(\);/);
   assert.match(html, /var cost=tierCost\(i,owned\[i\]\);/);
-  assert.match(html, /if\(dp<cost\)return;/);
+  assert.match(html, /if\(dp<cost\)\{playDeniedSound\(\);return;\}/);
   assert.match(html, /owned\[i\]\+\+;/);
 });
 
@@ -102,7 +102,7 @@ test('renderIncrementalPage fetches the backlog roster and overrides tier names,
   assert.match(html, /\}\)\.catch\(function\(\)\{\}\);/);
 });
 
-test('renderIncrementalPage lets the player exchange roulette credits for DP at a fixed one-way rate', () => {
+test('renderIncrementalPage lets the player exchange roulette credits for DP at a fixed rate', () => {
   const html = renderIncrementalPage({});
   assert.match(html, /var EXCHANGE_RATE=10;/);
   assert.match(html, /function loadRouletteCredits\(\)\{/);
@@ -112,8 +112,27 @@ test('renderIncrementalPage lets the player exchange roulette credits for DP at 
   assert.match(html, /exchangeResultEl\.textContent="クレジットが足りません";/);
   assert.match(html, /localStorage\.setItem\(CREDITS_KEY,String\(have-amount\)\);/);
   assert.match(html, /addDp\(amount\/EXCHANGE_RATE\);/);
-  // One-way constraint: CREDITS_KEY is written exactly once (deduction), never for reverse conversion
-  assert.equal((html.match(/setItem\(CREDITS_KEY/g) || []).length, 1);
+});
+
+test('renderIncrementalPage lets the player convert DP back into roulette credits at a worse rate than the forward exchange, capped per day to limit inflation', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var DP_TO_CREDITS_RATE=3;/);
+  assert.match(html, /var DP_TO_CREDITS_DAILY_CAP=300;/);
+  // Round-tripping credits->DP->credits must lose value: forward rate (10 credits/DP) beats the reverse (3 credits/DP)
+  assert.ok(3 < 10, 'reverse rate must be worse than the forward rate to discourage arbitrage');
+  assert.match(html, /var DP2CREDITS_KEY="ja_trans_incremental_dp2credits_v1";/);
+  assert.match(html, /function todayDateStr\(\)\{/);
+  assert.match(html, /function loadDp2CreditsToday\(\)\{/);
+  assert.match(html, /if\(obj&&obj\.date===todayDateStr\(\)&&isFinite\(obj\.amount\)\)return Math\.max\(0,obj\.amount\);/);
+  assert.match(html, /id="incremental-dp2credits-amount"/);
+  assert.match(html, /id="incremental-dp2credits-btn"/);
+  assert.match(html, /if\(dpAmount>dp\)\{/);
+  assert.match(html, /var remaining=Math\.max\(0,DP_TO_CREDITS_DAILY_CAP-already\);/);
+  assert.match(html, /var creditsGain=Math\.min\(remaining,Math\.floor\(dpAmount\*DP_TO_CREDITS_RATE\)\);/);
+  assert.match(html, /dp2cResultEl\.textContent="本日の変換上限に達しました";/);
+  assert.match(html, /localStorage\.setItem\(CREDITS_KEY,String\(haveCredits\+creditsGain\)\);/);
+  // Both directions now write CREDITS_KEY: forward deducts, reverse adds
+  assert.equal((html.match(/setItem\(CREDITS_KEY/g) || []).length, 2);
 });
 
 test('renderIncrementalPage lets the player prestige-reset dp/owned for a permanent multiplier based on lifetime DP', () => {
@@ -141,4 +160,85 @@ test('renderIncrementalPage includes a self-contained style block styling the in
   const html = renderIncrementalPage({});
   assert.match(html, /<style>[\s\S]*<\/style>/);
   assert.match(html, /\.incremental-tier\{/);
+});
+
+test('renderIncrementalPage shows a live income-per-second indicator, updated on tick/buy/click/prestige/exchange', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /id="incremental-income-value"/);
+  assert.match(html, /function renderIncome\(\)\{/);
+  assert.match(html, /incomeEl\.textContent=fmtDp\(totalOutputPerSec\(\)\);/);
+  assert.equal((html.match(/renderIncome\(\);/g) || []).length >= 5, true);
+});
+
+test('renderIncrementalPage formats DP with a visible decimal below 1000 so slow passive income is perceptible', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function fmtDp\(n\)\{/);
+  assert.match(html, /return n<1000\?n\.toFixed\(1\):Math\.floor\(n\)\.toLocaleString\(\);/);
+  assert.match(html, /dpEl\.textContent=fmtDp\(dp\);/);
+});
+
+test('renderIncrementalPage unlocks and renders lifetime-DP milestone achievement badges', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /id="incremental-achievements"/);
+  assert.match(html, /var MILESTONES=\[/);
+  assert.match(html, /function renderAchievements\(\)\{/);
+  assert.match(html, /var unlocked=lifetimeDp>=ms\.at;/);
+  assert.match(html, /span\.className="incremental-badge "\+\(unlocked\?"is-unlocked":"is-locked"\);/);
+});
+
+test('renderIncrementalPage plays an achievement fanfare only when a new milestone is crossed, not on initial render', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var lastAchievedCount=null;/);
+  assert.match(html, /if\(lastAchievedCount!==null&&achieved>lastAchievedCount\)\{playAchievementSound\(\);\}/);
+  assert.match(html, /lastAchievedCount=achieved;/);
+});
+
+test('renderIncrementalPage has a synth-based sound engine (no audio files) with a mutable on/off toggle', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var SOUND_KEY="ja_trans_incremental_sound_v1";/);
+  assert.match(html, /function isSoundOn\(\)\{return localStorage\.getItem\(SOUND_KEY\)!=="off";\}/);
+  assert.match(html, /function playTone\(freq,duration,type,startGain\)\{/);
+  assert.match(html, /if\(!isSoundOn\(\)\)return;/);
+  assert.match(html, /function playClickSound\(\)\{/);
+  assert.match(html, /function playBuySound\(\)\{/);
+  assert.match(html, /function playDeniedSound\(\)\{/);
+  assert.match(html, /function playExchangeSound\(\)\{/);
+  assert.match(html, /function playBonusAppearSound\(\)\{/);
+  assert.match(html, /function playBonusCollectSound\(\)\{/);
+  assert.match(html, /function playAchievementSound\(\)\{/);
+  assert.match(html, /function playPrestigeSound\(\)\{/);
+  assert.match(html, /id="incremental-sound-toggle"/);
+  assert.match(html, /function renderSoundBtn\(\)\{if\(soundBtn\)soundBtn\.textContent=isSoundOn\(\)\?"🔊":"🔈";\}/);
+  assert.match(html, /localStorage\.setItem\(SOUND_KEY,isSoundOn\(\)\?"off":"on"\);/);
+});
+
+test('renderIncrementalPage shows each tier\'s real game cover art from the roster when available', () => {
+  const html = renderIncrementalPage({});
+  for (let i = 0; i < 12; i++) {
+    assert.match(html, new RegExp('id="incremental-tier-img-' + i + '"'));
+  }
+  assert.match(html, /if\(tierEls\[i\]\.imgEl&&roster\[i\]&&roster\[i\]\.imageUrl\)\{/);
+  assert.match(html, /tierEls\[i\]\.imgEl\.src=roster\[i\]\.imageUrl;/);
+});
+
+test('renderIncrementalPage spawns a clickable timed bonus that grants a burst of DP', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /id="incremental-bonus-zone"/);
+  assert.match(html, /function spawnBonus\(\)\{/);
+  assert.match(html, /var bonus=Math\.max\(10,totalOutputPerSec\(\)\*30\+CLICK_BASE\*20\);/);
+  assert.match(html, /bonusTimer=setTimeout\(removeBonus,8000\);/);
+  assert.match(html, /function scheduleBonus\(\)\{/);
+});
+
+test('renderIncrementalPage plays a punch animation on the DP counter for discrete DP gains', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function punchEl\(el\)\{/);
+  assert.match(html, /#incremental-dp-value\.incremental-punch\{[^}]*animation:incrementalPunch/);
+});
+
+test('renderIncrementalPage embeds a syntactically valid client script', () => {
+  const page = renderIncrementalPage({});
+  const scriptMatch = page.match(/<script>([\s\S]*)<\/script>/);
+  assert.ok(scriptMatch, 'expected a <script> block in the rendered page');
+  assert.doesNotThrow(() => new Function(scriptMatch[1]));
 });

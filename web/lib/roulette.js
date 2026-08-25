@@ -1,7 +1,7 @@
 'use strict';
 
-var BASE_WIN_RATE = 0.4;
-var LUCKY_DAY_WIN_RATE = 0.55;
+var BASE_WIN_RATE = 0.3;
+var LUCKY_DAY_WIN_RATE = 0.45;
 var LUCKY_DAY_MODULO = 7;
 
 // 「ラッキーデー」判定はサーバー側で日付(UTCのYYYY-MM-DD)から決定論的に算出する。
@@ -29,8 +29,8 @@ function effectiveWinRate(date) {
 // 候補が1件しかない場合はハズレを表現しようがないため常に当たり扱いにする。
 function pickTripleResult(candidates, rng, winRate) {
   rng = rng || Math.random;
-  // 当初75%だったが、当選のたびに増える払い出しと組み合わせると残高が際限なく増え続け
-  // 「ギャンブル」としての緊張感がなくなる(ユーザー指摘)。40%に引き下げる。
+  // 当初75%→40%に引き下げ済みだったが、インクリメンタルゲームのDPをスロットのコインに
+  // 交換できるようになり資金供給が増えたため、経済のインフレを抑えるため30%にさらに引き下げる。
   winRate = typeof winRate === 'number' ? winRate : BASE_WIN_RATE;
   var winnerIndex = Math.floor(rng() * candidates.length);
   var hit = candidates.length <= 1 ? true : rng() < winRate;

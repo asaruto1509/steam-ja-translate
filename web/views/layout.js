@@ -534,7 +534,7 @@ function renderLayout(bodyHtml, opts) {
     + 'var STAGGER=[0,500,1000];'
     + 'var REEL_DURATIONS=[2,2,3.2];'
     + 'var BETLEVEL_KEY="ja_trans_roulette_betlevel_v1";'
-    + 'var BET_LEVELS=[{id:"low",cost:10,mult:0.7},{id:"normal",cost:15,mult:1},{id:"high",cost:20,mult:1.3}];'
+    + 'var BET_LEVELS=[{id:"low",cost:16,mult:0.7},{id:"normal",cost:24,mult:1},{id:"high",cost:32,mult:1.3}];'
     + 'function findBetLevel(id){for(var i=0;i<BET_LEVELS.length;i++){if(BET_LEVELS[i].id===id)return BET_LEVELS[i];}return BET_LEVELS[1];}'
     + 'function loadBetLevelId(){var v=localStorage.getItem(BETLEVEL_KEY);return (v==="low"||v==="high")?v:"normal";}'
     + 'var currentBetLevel=findBetLevel(loadBetLevelId());'

@@ -215,7 +215,7 @@ test('renderLayout triggers a reach effect when the first two reels already matc
 
 test('renderLayout charges the current bet level per spin, refunding exactly what was charged (or a spent free spin) if the API call fails', () => {
   const page = renderLayout('<p>x</p>', {});
-  assert.match(page, /var BET_LEVELS=\[\{id:"low",cost:10,mult:0\.7\},\{id:"normal",cost:15,mult:1\},\{id:"high",cost:20,mult:1\.3\}\];/);
+  assert.match(page, /var BET_LEVELS=\[\{id:"low",cost:16,mult:0\.7\},\{id:"normal",cost:24,mult:1\},\{id:"high",cost:32,mult:1\.3\}\];/);
   assert.match(page, /var SPIN_COST=currentBetLevel\.cost;/);
   assert.match(page, /var lastSpinCost=0;/);
   assert.match(page, /var lastSpinUsedFreeSpin=false/);
