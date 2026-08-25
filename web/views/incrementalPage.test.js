@@ -58,17 +58,18 @@ test('renderIncrementalPage computes per-tier output and total output scaled by 
   assert.match(html, /var TIER_OUTPUT_TIER_MULT=6;/);
   assert.match(html, /function tierBaseOutput\(i\)\{return TIER_BASE_OUTPUT\*Math\.pow\(TIER_OUTPUT_TIER_MULT,i\);\}/);
   assert.match(html, /function totalOutputPerSec\(\)\{/);
-  assert.match(html, /sum\*prestigeMult;/);
+  assert.match(html, /sum\*prestigeMult\*computeOutputMult\(skillLevels\);/);
   assert.match(html, /setInterval\(function\(\)\{/);
-  assert.match(html, /var d=Math\.max\(0,Math\.min\(OFFLINE_CAP_SECONDS,\(now-lastTick\)\/1000\)\);/);
+  assert.match(html, /var d=Math\.max\(0,Math\.min\(OFFLINE_CAP_SECONDS\+computeOfflineBonusSeconds\(skillLevels\),\(now-lastTick\)\/1000\)\);/);
   assert.match(html, /addDp\(totalOutputPerSec\(\)\*d\);/);
 });
 
 test('renderIncrementalPage grants capped offline progress based on elapsed time since lastTick, and shows a welcome-back message', () => {
   const html = renderIncrementalPage({});
   assert.match(html, /var OFFLINE_CAP_SECONDS=28800;/);
-  assert.match(html, /var elapsedSec=Math\.max\(0,Math\.min\(OFFLINE_CAP_SECONDS,\(nowMs-lastTick\)\/1000\)\);/);
-  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec;/);
+  assert.match(html, /var effectiveOfflineCap=OFFLINE_CAP_SECONDS\+computeOfflineBonusSeconds\(skillLevels\);/);
+  assert.match(html, /var elapsedSec=Math\.max\(0,Math\.min\(effectiveOfflineCap,\(nowMs-lastTick\)\/1000\)\);/);
+  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*\(hasOfflineBoost\(skillLevels\)\?1\.5:1\);/);
   assert.match(html, /welcomeEl\.textContent="おかえりなさい、\+"\+Math\.floor\(offlineGain\)\.toLocaleString\(\)\+" DP";/);
 });
 
@@ -76,7 +77,7 @@ test('renderIncrementalPage adds DP on manual click, scaled by prestige', () => 
   const html = renderIncrementalPage({});
   assert.match(html, /var CLICK_BASE=1;/);
   assert.match(html, /clickBtn\.addEventListener\("click",function\(\)\{/);
-  assert.match(html, /addDp\(CLICK_BASE\*prestigeMult\);/);
+  assert.match(html, /addDp\(CLICK_BASE\*prestigeMult\*computeClickMult\(skillLevels\)\);/);
 });
 
 test('renderIncrementalPage computes exponential per-tier purchase cost and wires buy buttons', () => {
@@ -85,7 +86,7 @@ test('renderIncrementalPage computes exponential per-tier purchase cost and wire
   assert.match(html, /var TIER_COST_TIER_MULT=6;/);
   assert.match(html, /var TIER_COST_GROWTH=1\.14;/);
   assert.match(html, /function tierBaseCost\(i\)\{return TIER_BASE_COST\*Math\.pow\(TIER_COST_TIER_MULT,i\);\}/);
-  assert.match(html, /function tierCost\(i,ownedCount\)\{return tierBaseCost\(i\)\*Math\.pow\(TIER_COST_GROWTH,ownedCount\);\}/);
+  assert.match(html, /function tierCost\(i,ownedCount\)\{return tierBaseCost\(i\)\*Math\.pow\(TIER_COST_GROWTH,ownedCount\)\*computeCostMult\(skillLevels\);\}/);
   assert.match(html, /function renderTiers\(\)\{/);
   assert.match(html, /tierEls\[i\]\.costEl\.textContent=Math\.ceil\(tierCost\(i,owned\[i\]\)\)\.toLocaleString\(\);/);
   assert.match(html, /var cost=tierCost\(i,owned\[i\]\);/);
@@ -110,8 +111,9 @@ test('renderIncrementalPage lets the player exchange roulette credits for DP at 
   assert.match(html, /exchangeBtn\.addEventListener\("click",function\(\)\{/);
   assert.match(html, /if\(amount>have\)\{/);
   assert.match(html, /exchangeResultEl\.textContent="クレジットが足りません";/);
+  assert.match(html, /var effectiveExchangeRate=EXCHANGE_RATE\/computeExchangeMult\(skillLevels\);/);
   assert.match(html, /localStorage\.setItem\(CREDITS_KEY,String\(have-amount\)\);/);
-  assert.match(html, /addDp\(amount\/EXCHANGE_RATE\);/);
+  assert.match(html, /addDp\(amount\/effectiveExchangeRate\);/);
 });
 
 test('renderIncrementalPage lets the player convert DP back into roulette credits at a worse rate than the forward exchange, capped per day to limit inflation', () => {
@@ -128,7 +130,8 @@ test('renderIncrementalPage lets the player convert DP back into roulette credit
   assert.match(html, /id="incremental-dp2credits-btn"/);
   assert.match(html, /if\(dpAmount>dp\)\{/);
   assert.match(html, /var remaining=Math\.max\(0,DP_TO_CREDITS_DAILY_CAP-already\);/);
-  assert.match(html, /var creditsGain=Math\.min\(remaining,Math\.floor\(dpAmount\*DP_TO_CREDITS_RATE\)\);/);
+  assert.match(html, /var effectiveDpToCreditsRate=DP_TO_CREDITS_RATE\*computeExchangeMult\(skillLevels\);/);
+  assert.match(html, /var creditsGain=Math\.min\(remaining,Math\.floor\(dpAmount\*effectiveDpToCreditsRate\)\);/);
   assert.match(html, /dp2cResultEl\.textContent="本日の変換上限に達しました";/);
   assert.match(html, /localStorage\.setItem\(CREDITS_KEY,String\(haveCredits\+creditsGain\)\);/);
   // Both directions now write CREDITS_KEY: forward deducts, reverse adds
@@ -143,7 +146,7 @@ test('renderIncrementalPage lets the player prestige-reset dp/owned for a perman
   assert.match(html, /if\(!window\.confirm\(/);
   assert.match(html, /dp=0;/);
   assert.match(html, /owned=new Array\(TIER_COUNT\)\.fill\(0\);/);
-  assert.match(html, /prestigeMult=1\+PRESTIGE_COEF\*Math\.sqrt\(lifetimeDp\/PRESTIGE_DIVISOR\);/);
+  assert.match(html, /prestigeMult=1\+PRESTIGE_COEF\*computePrestigeCoefMult\(skillLevels\)\*Math\.sqrt\(lifetimeDp\/PRESTIGE_DIVISOR\);/);
   // 累計DP(lifetimeDp)自体はプレステージでリセットしない(倍率計算の根拠として残す)
   assert.doesNotMatch(html, /lifetimeDp=0;/);
 });
@@ -225,7 +228,7 @@ test('renderIncrementalPage spawns a clickable timed bonus that grants a burst o
   const html = renderIncrementalPage({});
   assert.match(html, /id="incremental-bonus-zone"/);
   assert.match(html, /function spawnBonus\(\)\{/);
-  assert.match(html, /var bonus=Math\.max\(10,totalOutputPerSec\(\)\*30\+CLICK_BASE\*20\);/);
+  assert.match(html, /var bonus=Math\.max\(10,totalOutputPerSec\(\)\*30\+CLICK_BASE\*20\)\*computeBonusValueMult\(skillLevels\);/);
   assert.match(html, /bonusTimer=setTimeout\(removeBonus,8000\);/);
   assert.match(html, /function scheduleBonus\(\)\{/);
 });
@@ -282,4 +285,18 @@ test('renderIncrementalPage splices the skill tree client script into the same I
   const scriptMatch = html.match(/<script>([\s\S]*)<\/script>/);
   assert.ok(scriptMatch);
   assert.doesNotThrow(() => new Function(scriptMatch[1]));
+});
+
+test('renderIncrementalPage applies skill multipliers to output, tier cost, click power, offline cap, exchange rates, bonus interval/value, and prestige coefficient', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /return sum\*prestigeMult\*computeOutputMult\(skillLevels\);/);
+  assert.match(html, /function tierCost\(i,ownedCount\)\{return tierBaseCost\(i\)\*Math\.pow\(TIER_COST_GROWTH,ownedCount\)\*computeCostMult\(skillLevels\);\}/);
+  assert.match(html, /addDp\(CLICK_BASE\*prestigeMult\*computeClickMult\(skillLevels\)\);/);
+  assert.match(html, /var effectiveOfflineCap=OFFLINE_CAP_SECONDS\+computeOfflineBonusSeconds\(skillLevels\);/);
+  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*\(hasOfflineBoost\(skillLevels\)\?1\.5:1\);/);
+  assert.match(html, /var effectiveExchangeRate=EXCHANGE_RATE\/computeExchangeMult\(skillLevels\);/);
+  assert.match(html, /var effectiveDpToCreditsRate=DP_TO_CREDITS_RATE\*computeExchangeMult\(skillLevels\);/);
+  assert.match(html, /var delay=\(20000\+Math\.random\(\)\*25000\)\*computeBonusIntervalMult\(skillLevels\);/);
+  assert.match(html, /var bonus=Math\.max\(10,totalOutputPerSec\(\)\*30\+CLICK_BASE\*20\)\*computeBonusValueMult\(skillLevels\);/);
+  assert.match(html, /prestigeMult=1\+PRESTIGE_COEF\*computePrestigeCoefMult\(skillLevels\)\*Math\.sqrt\(lifetimeDp\/PRESTIGE_DIVISOR\);/);
 });
