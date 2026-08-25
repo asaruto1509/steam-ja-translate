@@ -1,5 +1,6 @@
 'use strict';
 var html = require('../lib/html.js');
+var incrementalSkills = require('./incrementalSkills.js');
 
 var TIER_COUNT = 12;
 var DP_TO_CREDITS_RATE = 3;
@@ -481,7 +482,8 @@ var CLIENT_STYLE = ''
   + '.incremental-back-link{text-align:center;font-size:13px}'
   + '@keyframes incrementalPunch{0%{transform:scale(1.3);color:#2f8f2f}100%{transform:scale(1);color:inherit}}'
   + '@keyframes incrementalBonusPop{0%{transform:scale(0)}100%{transform:scale(1)}}'
-  + '@keyframes incrementalBonusFloat{0%{transform:translateY(0)}100%{transform:translateY(-6px)}}';
+  + '@keyframes incrementalBonusFloat{0%{transform:translateY(0)}100%{transform:translateY(-6px)}}'
+  + incrementalSkills.SKILL_STYLE;
 
 function renderIncrementalPage(opts) {
   opts = opts || {};
@@ -538,6 +540,7 @@ function renderIncrementalPage(opts) {
     + '<p class="incremental-exchange-cap">本日の変換実績: <span id="incremental-dp2credits-cap">0 / ' + DP_TO_CREDITS_DAILY_CAP + '</span></p>'
     + '<p id="incremental-dp2credits-result"></p>'
     + '</div>'
+    + incrementalSkills.renderSkillPanelHtml()
     + '<div class="incremental-prestige-wrap">'
     + '<button type="button" id="incremental-prestige-btn">' + ICON_STAR + '新年度リセット(プレステージ)</button>'
     + '<div class="incremental-prestige-caption">DPと従業員は0に戻りますが、永続倍率を獲得します</div>'

@@ -97,3 +97,25 @@ test('isNodeUnlockable checks both that a next node exists and the player can af
   assert.equal(skills.isNodeUnlockable(start, 'production', 1), true);
   assert.equal(skills.isNodeUnlockable(done, 'production', 999), false);
 });
+
+test('renderSkillPanelHtml renders every node with matching bead/cost ids and the SP/research HUD', () => {
+  const html = skills.renderSkillPanelHtml();
+  skills.BRANCH_ORDER.forEach((b) => {
+    skills.SKILL_BRANCHES[b].forEach((n, i) => {
+      assert.match(html, new RegExp('id="incremental-skill-node-' + b + '-' + i + '"'));
+      assert.match(html, new RegExp('id="incremental-skill-bead-' + b + '-' + i + '"'));
+      assert.match(html, new RegExp('id="incremental-skill-cost-' + b + '-' + i + '"'));
+      assert.match(html, new RegExp(n.label));
+    });
+  });
+  assert.match(html, /id="incremental-sp-value"/);
+  assert.match(html, /id="incremental-research-btn"/);
+  assert.match(html, /id="incremental-research-cost"/);
+});
+
+test('SKILL_STYLE styles the skill node beads and lock/unlock/affordable states', () => {
+  assert.match(skills.SKILL_STYLE, /\.incremental-skill-node-bead\{/);
+  assert.match(skills.SKILL_STYLE, /\.incremental-skill-node\.is-unlocked/);
+  assert.match(skills.SKILL_STYLE, /\.incremental-skill-node\.is-affordable/);
+  assert.match(skills.SKILL_STYLE, /\.incremental-skill-node\.is-locked/);
+});

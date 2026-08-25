@@ -128,6 +128,53 @@ function isNodeUnlockable(skillLevels, branchId, sp) {
   return cost !== null && sp >= cost;
 }
 
+function renderSkillPanelHtml() {
+  var branchesHtml = BRANCH_ORDER.map(function (b) {
+    var nodesHtml = SKILL_BRANCHES[b].map(function (n, i) {
+      return '<button type="button" class="incremental-skill-node" id="incremental-skill-node-' + b + '-' + i + '">'
+        + '<span class="incremental-skill-node-bead" id="incremental-skill-bead-' + b + '-' + i + '"></span>'
+        + '<span class="incremental-skill-node-label">' + n.label + '</span>'
+        + '<span class="incremental-skill-node-cost" id="incremental-skill-cost-' + b + '-' + i + '">' + n.cost + ' SP</span>'
+        + '</button>';
+    }).join('');
+    return '<div class="incremental-skill-branch" data-branch="' + b + '">'
+      + '<div class="incremental-skill-branch-title">' + BRANCH_LABELS[b] + '</div>'
+      + '<div class="incremental-skill-nodes">' + nodesHtml + '</div>'
+      + '</div>';
+  }).join('');
+  return '<div class="incremental-panel incremental-skills">'
+    + '<div class="incremental-panel-title">🌳 スキルツリー</div>'
+    + '<div class="incremental-skills-hud">'
+    + '<div class="incremental-chip incremental-sp"><div><div class="incremental-chip-label">SP</div>'
+    + '<div class="incremental-chip-value"><span id="incremental-sp-value">0</span></div></div></div>'
+    + '<button type="button" id="incremental-research-btn">🔬 研究にDPを投資(<span id="incremental-research-cost">500</span> DP)</button>'
+    + '</div>'
+    + '<div class="incremental-skill-branches">' + branchesHtml + '</div>'
+    + '</div>';
+}
+
+var SKILL_STYLE = ''
+  + '.incremental-skills-hud{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}'
+  + '.incremental-sp{background:#e3f7d8}'
+  + '#incremental-research-btn{padding:9px 16px;border-radius:12px;border:3px solid #3b2a1a;background:#a8d8b9;color:#1f3d1a;'
+  + 'box-shadow:3px 3px 0 #3b2a1a;cursor:pointer;min-height:40px;font-size:13px;font-weight:800;font-family:inherit}'
+  + '.incremental-skill-branches{display:flex;gap:16px;flex-wrap:wrap}'
+  + '.incremental-skill-branch{flex:1;min-width:160px}'
+  + '.incremental-skill-branch-title{font-size:13px;font-weight:800;text-align:center;margin-bottom:8px}'
+  + '.incremental-skill-nodes{display:flex;flex-direction:column;align-items:center;gap:4px}'
+  + '.incremental-skill-node{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;'
+  + 'cursor:pointer;padding:6px 4px;font-family:inherit;width:100%}'
+  + '.incremental-skill-node-bead{width:28px;height:28px;border-radius:50%;border:3px solid #3b2a1a;background:#e7dcc4;'
+  + 'display:block;position:relative}'
+  + '.incremental-skill-node:not(:first-child) .incremental-skill-node-bead::before{content:"";position:absolute;'
+  + 'top:-14px;left:50%;transform:translateX(-50%);width:3px;height:14px;background:#3b2a1a}'
+  + '.incremental-skill-node.is-unlocked .incremental-skill-node-bead{background:#7bc86c}'
+  + '.incremental-skill-node.is-affordable .incremental-skill-node-bead{background:#ffd75e}'
+  + '.incremental-skill-node.is-next .incremental-skill-node-bead{opacity:0.7}'
+  + '.incremental-skill-node.is-locked .incremental-skill-node-bead{opacity:0.35}'
+  + '.incremental-skill-node-label{font-size:10px;font-weight:700;text-align:center}'
+  + '.incremental-skill-node-cost{font-size:10px;font-weight:700;color:#8a6a3a}';
+
 module.exports = {
   SKILL_BRANCHES: SKILL_BRANCHES,
   BRANCH_ORDER: BRANCH_ORDER,
@@ -144,5 +191,7 @@ module.exports = {
   hasOfflineBoost: hasOfflineBoost,
   hasAutoCollectBonus: hasAutoCollectBonus,
   nextNodeCost: nextNodeCost,
-  isNodeUnlockable: isNodeUnlockable
+  isNodeUnlockable: isNodeUnlockable,
+  renderSkillPanelHtml: renderSkillPanelHtml,
+  SKILL_STYLE: SKILL_STYLE
 };

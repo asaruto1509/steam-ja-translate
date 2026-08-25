@@ -242,3 +242,14 @@ test('renderIncrementalPage embeds a syntactically valid client script', () => {
   assert.ok(scriptMatch, 'expected a <script> block in the rendered page');
   assert.doesNotThrow(() => new Function(scriptMatch[1]));
 });
+
+test('renderIncrementalPage includes the skill tree panel from incrementalSkills.js', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /incremental-panel incremental-skills/);
+  assert.match(html, /id="incremental-sp-value"/);
+  assert.match(html, /id="incremental-research-btn"/);
+  assert.match(html, /id="incremental-skill-node-production-0"/);
+  assert.match(html, /id="incremental-skill-node-management-0"/);
+  assert.match(html, /id="incremental-skill-node-luck-0"/);
+  assert.match(html, /\.incremental-skill-node-bead\{/);
+});
