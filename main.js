@@ -7269,30 +7269,35 @@
         }
       } catch (e) {}
 
-      if (!translated) {
-        delete textEl.dataset.jaOrigHtml;
-        repBtn.textContent = '🔄 置き換え';
-        repBtn.disabled = false;
-        toast('置き換え翻訳失敗', '#e74c3c');
-        return;
+      var parts = null;
+      if (translated) {
+        var markerRe = /\s*\[(\d+)\]\s*/g;
+        parts = [];
+        var lastEnd = 0, m;
+        while ((m = markerRe.exec(translated)) !== null) {
+          parts.push(translated.slice(lastEnd, m.index).trim());
+          lastEnd = m.index + m[0].length;
+        }
+        parts.push(translated.slice(lastEnd).trim());
       }
 
-      var markerRe = /\s*\[(\d+)\]\s*/g;
-      var parts = [], lastEnd = 0, m;
-      while ((m = markerRe.exec(translated)) !== null) {
-        parts.push(translated.slice(lastEnd, m.index).trim());
-        lastEnd = m.index + m[0].length;
-      }
-      parts.push(translated.slice(lastEnd).trim());
-
-      if (parts.length === nodes.length) {
+      if (parts && parts.length === nodes.length) {
         nodes.forEach(function (n, i) { setNodeText(n, parts[i]); });
       } else {
+        // GTXの一括翻訳が失敗/ズレた場合、translate()（transEngine対応・フォールバック付き）で1件ずつ処理
+        var anySuccess = false;
         for (var fi = 0; fi < nodes.length; fi++) {
           var orig = nodes[fi].textContent.trim();
           if (!orig) continue;
           var res = await translate(orig);
-          if (res) setNodeText(nodes[fi], res);
+          if (res) { setNodeText(nodes[fi], res); anySuccess = true; }
+        }
+        if (!anySuccess) {
+          delete textEl.dataset.jaOrigHtml;
+          repBtn.textContent = '🔄 置き換え';
+          repBtn.disabled = false;
+          toast('置き換え翻訳失敗', '#e74c3c');
+          return;
         }
       }
 
