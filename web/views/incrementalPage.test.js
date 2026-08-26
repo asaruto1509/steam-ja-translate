@@ -58,17 +58,18 @@ test('renderIncrementalPage computes per-tier output and total output scaled by 
   assert.match(html, /var TIER_OUTPUT_TIER_MULT=6;/);
   assert.match(html, /function tierBaseOutput\(i\)\{return TIER_BASE_OUTPUT\*Math\.pow\(TIER_OUTPUT_TIER_MULT,i\);\}/);
   assert.match(html, /function totalOutputPerSec\(\)\{/);
-  assert.match(html, /sum\*prestigeMult;/);
+  assert.match(html, /sum\*prestigeMult\*computeOutputMult\(skillLevels\);/);
   assert.match(html, /setInterval\(function\(\)\{/);
-  assert.match(html, /var d=Math\.max\(0,Math\.min\(OFFLINE_CAP_SECONDS,\(now-lastTick\)\/1000\)\);/);
-  assert.match(html, /addDp\(totalOutputPerSec\(\)\*d\);/);
+  assert.match(html, /var d=Math\.max\(0,Math\.min\(OFFLINE_CAP_SECONDS\+computeOfflineBonusSeconds\(skillLevels\),\(now-lastTick\)\/1000\)\);/);
+  assert.match(html, /addDp\(totalOutputPerSec\(\)\*d\*offlineBoostMult\(\)\);/);
 });
 
 test('renderIncrementalPage grants capped offline progress based on elapsed time since lastTick, and shows a welcome-back message', () => {
   const html = renderIncrementalPage({});
   assert.match(html, /var OFFLINE_CAP_SECONDS=28800;/);
-  assert.match(html, /var elapsedSec=Math\.max\(0,Math\.min\(OFFLINE_CAP_SECONDS,\(nowMs-lastTick\)\/1000\)\);/);
-  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec;/);
+  assert.match(html, /var effectiveOfflineCap=OFFLINE_CAP_SECONDS\+computeOfflineBonusSeconds\(skillLevels\);/);
+  assert.match(html, /var elapsedSec=Math\.max\(0,Math\.min\(effectiveOfflineCap,\(nowMs-lastTick\)\/1000\)\);/);
+  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*offlineBoostMult\(\);/);
   assert.match(html, /welcomeEl\.textContent="おかえりなさい、\+"\+Math\.floor\(offlineGain\)\.toLocaleString\(\)\+" DP";/);
 });
 
@@ -76,7 +77,7 @@ test('renderIncrementalPage adds DP on manual click, scaled by prestige', () => 
   const html = renderIncrementalPage({});
   assert.match(html, /var CLICK_BASE=1;/);
   assert.match(html, /clickBtn\.addEventListener\("click",function\(\)\{/);
-  assert.match(html, /addDp\(CLICK_BASE\*prestigeMult\);/);
+  assert.match(html, /addDp\(CLICK_BASE\*prestigeMult\*computeClickMult\(skillLevels\)\);/);
 });
 
 test('renderIncrementalPage computes exponential per-tier purchase cost and wires buy buttons', () => {
@@ -85,7 +86,7 @@ test('renderIncrementalPage computes exponential per-tier purchase cost and wire
   assert.match(html, /var TIER_COST_TIER_MULT=6;/);
   assert.match(html, /var TIER_COST_GROWTH=1\.14;/);
   assert.match(html, /function tierBaseCost\(i\)\{return TIER_BASE_COST\*Math\.pow\(TIER_COST_TIER_MULT,i\);\}/);
-  assert.match(html, /function tierCost\(i,ownedCount\)\{return tierBaseCost\(i\)\*Math\.pow\(TIER_COST_GROWTH,ownedCount\);\}/);
+  assert.match(html, /function tierCost\(i,ownedCount\)\{return tierBaseCost\(i\)\*Math\.pow\(TIER_COST_GROWTH,ownedCount\)\*computeCostMult\(skillLevels\);\}/);
   assert.match(html, /function renderTiers\(\)\{/);
   assert.match(html, /tierEls\[i\]\.costEl\.textContent=Math\.ceil\(tierCost\(i,owned\[i\]\)\)\.toLocaleString\(\);/);
   assert.match(html, /var cost=tierCost\(i,owned\[i\]\);/);
@@ -110,8 +111,9 @@ test('renderIncrementalPage lets the player exchange roulette credits for DP at 
   assert.match(html, /exchangeBtn\.addEventListener\("click",function\(\)\{/);
   assert.match(html, /if\(amount>have\)\{/);
   assert.match(html, /exchangeResultEl\.textContent="クレジットが足りません";/);
+  assert.match(html, /var effectiveExchangeRate=EXCHANGE_RATE\/computeExchangeMult\(skillLevels\);/);
   assert.match(html, /localStorage\.setItem\(CREDITS_KEY,String\(have-amount\)\);/);
-  assert.match(html, /addDp\(amount\/EXCHANGE_RATE\);/);
+  assert.match(html, /addDp\(amount\/effectiveExchangeRate\);/);
 });
 
 test('renderIncrementalPage lets the player convert DP back into roulette credits at a worse rate than the forward exchange, capped per day to limit inflation', () => {
@@ -128,7 +130,8 @@ test('renderIncrementalPage lets the player convert DP back into roulette credit
   assert.match(html, /id="incremental-dp2credits-btn"/);
   assert.match(html, /if\(dpAmount>dp\)\{/);
   assert.match(html, /var remaining=Math\.max\(0,DP_TO_CREDITS_DAILY_CAP-already\);/);
-  assert.match(html, /var creditsGain=Math\.min\(remaining,Math\.floor\(dpAmount\*DP_TO_CREDITS_RATE\)\);/);
+  assert.match(html, /var effectiveDpToCreditsRate=DP_TO_CREDITS_RATE\*computeExchangeMult\(skillLevels\);/);
+  assert.match(html, /var creditsGain=Math\.min\(remaining,Math\.floor\(dpAmount\*effectiveDpToCreditsRate\)\);/);
   assert.match(html, /dp2cResultEl\.textContent="本日の変換上限に達しました";/);
   assert.match(html, /localStorage\.setItem\(CREDITS_KEY,String\(haveCredits\+creditsGain\)\);/);
   // Both directions now write CREDITS_KEY: forward deducts, reverse adds
@@ -143,7 +146,7 @@ test('renderIncrementalPage lets the player prestige-reset dp/owned for a perman
   assert.match(html, /if\(!window\.confirm\(/);
   assert.match(html, /dp=0;/);
   assert.match(html, /owned=new Array\(TIER_COUNT\)\.fill\(0\);/);
-  assert.match(html, /prestigeMult=1\+PRESTIGE_COEF\*Math\.sqrt\(lifetimeDp\/PRESTIGE_DIVISOR\);/);
+  assert.match(html, /prestigeMult=1\+PRESTIGE_COEF\*computePrestigeCoefMult\(skillLevels\)\*Math\.sqrt\(lifetimeDp\/PRESTIGE_DIVISOR\);/);
   // 累計DP(lifetimeDp)自体はプレステージでリセットしない(倍率計算の根拠として残す)
   assert.doesNotMatch(html, /lifetimeDp=0;/);
 });
@@ -189,7 +192,8 @@ test('renderIncrementalPage unlocks and renders lifetime-DP milestone achievemen
 test('renderIncrementalPage plays an achievement fanfare only when a new milestone is crossed, not on initial render', () => {
   const html = renderIncrementalPage({});
   assert.match(html, /var lastAchievedCount=null;/);
-  assert.match(html, /if\(lastAchievedCount!==null&&achieved>lastAchievedCount\)\{playAchievementSound\(\);\}/);
+  assert.match(html, /if\(lastAchievedCount!==null&&achieved>lastAchievedCount\)\{/);
+  assert.match(html, /playAchievementSound\(\);/);
   assert.match(html, /lastAchievedCount=achieved;/);
 });
 
@@ -225,7 +229,7 @@ test('renderIncrementalPage spawns a clickable timed bonus that grants a burst o
   const html = renderIncrementalPage({});
   assert.match(html, /id="incremental-bonus-zone"/);
   assert.match(html, /function spawnBonus\(\)\{/);
-  assert.match(html, /var bonus=Math\.max\(10,totalOutputPerSec\(\)\*30\+CLICK_BASE\*20\);/);
+  assert.match(html, /var bonus=Math\.max\(10,totalOutputPerSec\(\)\*30\+CLICK_BASE\*20\)\*computeBonusValueMult\(skillLevels\);/);
   assert.match(html, /bonusTimer=setTimeout\(removeBonus,8000\);/);
   assert.match(html, /function scheduleBonus\(\)\{/);
 });
@@ -241,4 +245,175 @@ test('renderIncrementalPage embeds a syntactically valid client script', () => {
   const scriptMatch = page.match(/<script>([\s\S]*)<\/script>/);
   assert.ok(scriptMatch, 'expected a <script> block in the rendered page');
   assert.doesNotThrow(() => new Function(scriptMatch[1]));
+});
+
+test('renderIncrementalPage includes the skill tree panel from incrementalSkills.js', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /incremental-panel incremental-skills/);
+  assert.match(html, /id="incremental-sp-value"/);
+  assert.match(html, /id="incremental-research-btn"/);
+  assert.match(html, /id="incremental-skill-node-production-0"/);
+  assert.match(html, /id="incremental-skill-node-management-0"/);
+  assert.match(html, /id="incremental-skill-node-luck-0"/);
+  assert.match(html, /\.incremental-skill-node-bead\{/);
+});
+
+test('renderIncrementalPage loads and persists sp/skillLevels/researchUses state, never resetting them on prestige', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var SP_KEY="ja_trans_incremental_sp_v1";/);
+  assert.match(html, /var SKILLS_KEY="ja_trans_incremental_skills_v1";/);
+  assert.match(html, /var RESEARCH_USES_KEY="ja_trans_incremental_research_uses_v1";/);
+  assert.match(html, /var sp=loadNumber\(SP_KEY,0\);/);
+  assert.match(html, /var researchUses=loadNumber\(RESEARCH_USES_KEY,0\);/);
+  assert.match(html, /function loadSkillLevels\(\)\{/);
+  assert.match(html, /var skillLevels=loadSkillLevels\(\);/);
+  assert.match(html, /localStorage\.setItem\(SP_KEY,String\(sp\)\);/);
+  assert.match(html, /localStorage\.setItem\(SKILLS_KEY,JSON\.stringify\(skillLevels\)\);/);
+  assert.match(html, /localStorage\.setItem\(RESEARCH_USES_KEY,String\(researchUses\)\);/);
+  // prestige handler must not touch sp/skillLevels/researchUses
+  const prestigeHandlerMatch = html.match(/prestigeBtn\.addEventListener\("click",function\(\)\{[\s\S]*?\}\);/);
+  assert.ok(prestigeHandlerMatch, 'expected to find the prestige click handler');
+  assert.doesNotMatch(prestigeHandlerMatch[0], /skillLevels=/);
+  assert.doesNotMatch(prestigeHandlerMatch[0], /^sp=/m);
+});
+
+test('renderIncrementalPage splices the skill tree client script into the same IIFE as the rest of the page logic', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var SKILL_BRANCHES=\{"production":\[/);
+  assert.match(html, /function renderSkillTree\(\)\{/);
+  assert.match(html, /el\.wrap\.addEventListener\("click",function\(\)\{/);
+  assert.match(html, /id="incremental-research-btn"/);
+  const scriptMatch = html.match(/<script>([\s\S]*)<\/script>/);
+  assert.ok(scriptMatch);
+  assert.doesNotThrow(() => new Function(scriptMatch[1]));
+});
+
+test('renderIncrementalPage applies skill multipliers to output, tier cost, click power, offline cap, exchange rates, bonus interval/value, and prestige coefficient', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /return sum\*prestigeMult\*computeOutputMult\(skillLevels\);/);
+  assert.match(html, /function tierCost\(i,ownedCount\)\{return tierBaseCost\(i\)\*Math\.pow\(TIER_COST_GROWTH,ownedCount\)\*computeCostMult\(skillLevels\);\}/);
+  assert.match(html, /addDp\(CLICK_BASE\*prestigeMult\*computeClickMult\(skillLevels\)\);/);
+  assert.match(html, /var effectiveOfflineCap=OFFLINE_CAP_SECONDS\+computeOfflineBonusSeconds\(skillLevels\);/);
+  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*offlineBoostMult\(\);/);
+  assert.match(html, /var effectiveExchangeRate=EXCHANGE_RATE\/computeExchangeMult\(skillLevels\);/);
+  assert.match(html, /var effectiveDpToCreditsRate=DP_TO_CREDITS_RATE\*computeExchangeMult\(skillLevels\);/);
+  assert.match(html, /var delay=\(20000\+Math\.random\(\)\*25000\)\*computeBonusIntervalMult\(skillLevels\);/);
+  assert.match(html, /var bonus=Math\.max\(10,totalOutputPerSec\(\)\*30\+CLICK_BASE\*20\)\*computeBonusValueMult\(skillLevels\);/);
+  assert.match(html, /prestigeMult=1\+PRESTIGE_COEF\*computePrestigeCoefMult\(skillLevels\)\*Math\.sqrt\(lifetimeDp\/PRESTIGE_DIVISOR\);/);
+});
+
+test('renderIncrementalPage auto-buys the cheapest affordable tier every 60s once the production branch is fully unlocked', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function buyTierIndex\(i\)\{/);
+  assert.match(html, /var cost=tierCost\(i,owned\[i\]\);/);
+  assert.match(html, /if\(dp<cost\)return false;/);
+  assert.match(html, /dp-=cost;/);
+  assert.match(html, /owned\[i\]\+\+;/);
+  assert.match(html, /return true;/);
+  assert.match(html, /t\.buyBtn\.addEventListener\("click",function\(\)\{if\(!buyTierIndex\(i\)\)\{playDeniedSound\(\);return;\}/);
+  assert.match(html, /if\(hasAutoBuy\(skillLevels\)\)\{/);
+  assert.match(html, /autoBuyTimer\+=d;/);
+  assert.match(html, /if\(autoBuyTimer>=60\)\{/);
+});
+
+test('renderIncrementalPage auto-collects the bonus star 5 seconds after it spawns once the luck branch is fully unlocked', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /if\(hasAutoCollectBonus\(skillLevels\)\)\{/);
+  assert.match(html, /setTimeout\(function\(\)\{if\(bonusEl\)bonusEl\.click\(\);\},5000\);/);
+});
+
+test('renderIncrementalPage grants SP on prestige (always at least 1) without resetting sp itself', () => {
+  const html = renderIncrementalPage({});
+  const prestigeHandlerMatch = html.match(/prestigeBtn\.addEventListener\("click",function\(\)\{[\s\S]*?\}\);/);
+  assert.ok(prestigeHandlerMatch);
+  assert.match(prestigeHandlerMatch[0], /sp\+=Math\.max\(1,Math\.floor\(Math\.sqrt\(lifetimeDp\/500000\)\)\);/);
+  assert.match(prestigeHandlerMatch[0], /renderSp\(\);/);
+});
+
+test('renderIncrementalPage grants weighted SP (1..5) the first time each achievement milestone is newly crossed, once per milestone', () => {
+  const html = renderIncrementalPage({});
+  const achievementsFnMatch = html.match(/function renderAchievements\(\)\{[\s\S]*?lastAchievedCount=achieved;/);
+  assert.ok(achievementsFnMatch, 'expected to find renderAchievements source');
+  assert.match(achievementsFnMatch[0], /var spGain=0;/);
+  assert.match(achievementsFnMatch[0], /for\(var ai=awardedMilestones\+1;ai<=achieved;ai\+\+\)\{spGain\+=ai;\}/);
+  assert.match(achievementsFnMatch[0], /sp\+=spGain;/);
+});
+
+test('renderIncrementalPage embeds a syntactically valid client script with the full skill tree wired in', () => {
+  const page = renderIncrementalPage({});
+  const scriptMatch = page.match(/<script>([\s\S]*)<\/script>/);
+  assert.ok(scriptMatch);
+  assert.doesNotThrow(() => new Function(scriptMatch[1]));
+});
+
+test('renderIncrementalPage tracks awarded milestones separately from the fanfare-suppression flag, in a persisted key', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var AWARDED_MILESTONES_KEY="ja_trans_incremental_awarded_milestones_v1";/);
+  assert.match(html, /var awardedMilestones=loadNumber\(AWARDED_MILESTONES_KEY,0\);/);
+  assert.match(html, /localStorage\.setItem\(AWARDED_MILESTONES_KEY,String\(awardedMilestones\)\);/);
+});
+
+test('renderIncrementalPage grants milestone SP off awardedMilestones (immune to offline-crossed milestones being forfeited) and refreshes the skill tree', () => {
+  const html = renderIncrementalPage({});
+  const achievementsFnMatch = html.match(/function renderAchievements\(\)\{[\s\S]*?lastAchievedCount=achieved;/);
+  assert.ok(achievementsFnMatch, 'expected to find renderAchievements source');
+  const body = achievementsFnMatch[0];
+  const grantBlockMatch = body.match(/if\(achieved>awardedMilestones\)\{[\s\S]*?renderSkillTree\(\);\}/);
+  assert.ok(grantBlockMatch, 'expected an if(achieved>awardedMilestones){...} grant block');
+  const grantBlock = grantBlockMatch[0];
+  assert.match(grantBlock, /awardedMilestones=achieved;/);
+  assert.match(grantBlock, /renderSkillTree\(\);/);
+  assert.match(grantBlock, /saveState\(\);/);
+  assert.match(grantBlock, /renderSp\(\);/);
+  // sound stays gated on lastAchievedCount alone, as a separate statement not tied to the SP grant
+  assert.match(body, /if\(lastAchievedCount!==null&&achieved>lastAchievedCount\)\{playAchievementSound\(\);\}/);
+});
+
+test('renderIncrementalPage refreshes the skill tree after a prestige SP grant', () => {
+  const html = renderIncrementalPage({});
+  const prestigeHandlerMatch = html.match(/prestigeBtn\.addEventListener\("click",function\(\)\{[\s\S]*?\}\);/);
+  assert.ok(prestigeHandlerMatch, 'expected to find the prestige click handler');
+  const handler = prestigeHandlerMatch[0];
+  const spIdx = handler.indexOf('renderSp();');
+  const skillTreeIdx = handler.indexOf('renderSkillTree();');
+  assert.ok(spIdx >= 0, 'expected renderSp() in the prestige handler');
+  assert.ok(skillTreeIdx > spIdx, 'expected renderSkillTree() to appear after renderSp() in the prestige handler');
+});
+
+test('renderIncrementalPage applies the management-capstone offline boost via one shared helper at both the reload-time and setInterval catch-up sites', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function offlineBoostMult\(\)\{return hasOfflineBoost\(skillLevels\)\?1\.5:1;\}/);
+  assert.equal((html.match(/function offlineBoostMult\(\)/g) || []).length, 1, 'offlineBoostMult should be defined exactly once');
+  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*offlineBoostMult\(\);/);
+  assert.match(html, /addDp\(totalOutputPerSec\(\)\*d\*offlineBoostMult\(\)\);/);
+  // neither call site should still carry the old inline ternary
+  assert.doesNotMatch(html, /elapsedSec\*\(hasOfflineBoost\(skillLevels\)\?1\.5:1\)/);
+  assert.doesNotMatch(html, /addDp\(totalOutputPerSec\(\)\*d\);/);
+});
+
+test('renderIncrementalPage tracks whether AWARDED_MILESTONES_KEY existed prior to this session, to seed awardedMilestones without a retroactive SP grant on first-ever load', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var awardedMilestones=loadNumber\(AWARDED_MILESTONES_KEY,0\);var awardedMilestonesInitialized=\(localStorage\.getItem\(AWARDED_MILESTONES_KEY\)!==null\);/);
+});
+
+test('renderIncrementalPage seeds awardedMilestones with no SP grant on a brand-new browser, and only grants weighted SP for milestones newly crossed thereafter', () => {
+  const html = renderIncrementalPage({});
+  const achievementsFnMatch = html.match(/function renderAchievements\(\)\{[\s\S]*?lastAchievedCount=achieved;/);
+  assert.ok(achievementsFnMatch, 'expected to find renderAchievements source');
+  const body = achievementsFnMatch[0];
+  assert.match(body, /if\(!awardedMilestonesInitialized\)\{awardedMilestones=achieved;awardedMilestonesInitialized=true;saveState\(\);\}else if\(achieved>awardedMilestones\)\{/);
+  const seedBlockMatch = body.match(/if\(!awardedMilestonesInitialized\)\{[\s\S]*?\}else if/);
+  assert.ok(seedBlockMatch, 'expected a first-run seed block');
+  assert.doesNotMatch(seedBlockMatch[0], /sp\+=/, 'seeding awardedMilestones on first-ever load must not grant SP');
+  assert.doesNotMatch(seedBlockMatch[0], /renderSp\(\);/, 'no SP was granted, so no need to re-render it');
+});
+
+test('renderIncrementalPage derives SKILL_BRANCH_LENGTHS and the loadSkillLevels() fallback from the current branch data (production:7, management:7, luck:6)', () => {
+  const html = renderIncrementalPage({});
+  // Node-source-level property (derivation via incrementalSkills.BRANCH_ORDER.reduce(...) rather than
+  // hand-typed branch names) is verified by reading web/views/incrementalPage.js directly -- the
+  // rendered client-script text only proves the resulting numeric values are correct, since the
+  // .reduce() call itself runs at Node render time and never appears in client-script output.
+  assert.match(html, /var SKILL_BRANCH_LENGTHS=\{"production":7,"management":7,"luck":6\};/);
+  assert.match(html, /var fallback=\{"production":0,"management":0,"luck":0\};/);
 });
