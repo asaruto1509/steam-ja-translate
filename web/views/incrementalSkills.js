@@ -197,6 +197,7 @@ function buildSkillClientScript() {
     + 'var spEl=page.querySelector("#incremental-sp-value");'
     + 'function renderSp(){if(spEl)spEl.textContent=Math.floor(sp).toLocaleString();}'
     + 'function renderSkillTree(){'
+    + 'if(typeof skillBeadEls==="undefined")return;'
     + 'BRANCH_ORDER.forEach(function(b){'
     + 'var level=skillLevels[b];'
     + 'SKILL_BRANCHES[b].forEach(function(n,i){'

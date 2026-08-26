@@ -391,6 +391,23 @@ test('renderIncrementalPage applies the management-capstone offline boost via on
   assert.doesNotMatch(html, /addDp\(totalOutputPerSec\(\)\*d\);/);
 });
 
+test('renderIncrementalPage tracks whether AWARDED_MILESTONES_KEY existed prior to this session, to seed awardedMilestones without a retroactive SP grant on first-ever load', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var awardedMilestones=loadNumber\(AWARDED_MILESTONES_KEY,0\);var awardedMilestonesInitialized=\(localStorage\.getItem\(AWARDED_MILESTONES_KEY\)!==null\);/);
+});
+
+test('renderIncrementalPage seeds awardedMilestones with no SP grant on a brand-new browser, and only grants weighted SP for milestones newly crossed thereafter', () => {
+  const html = renderIncrementalPage({});
+  const achievementsFnMatch = html.match(/function renderAchievements\(\)\{[\s\S]*?lastAchievedCount=achieved;/);
+  assert.ok(achievementsFnMatch, 'expected to find renderAchievements source');
+  const body = achievementsFnMatch[0];
+  assert.match(body, /if\(!awardedMilestonesInitialized\)\{awardedMilestones=achieved;awardedMilestonesInitialized=true;saveState\(\);\}else if\(achieved>awardedMilestones\)\{/);
+  const seedBlockMatch = body.match(/if\(!awardedMilestonesInitialized\)\{[\s\S]*?\}else if/);
+  assert.ok(seedBlockMatch, 'expected a first-run seed block');
+  assert.doesNotMatch(seedBlockMatch[0], /sp\+=/, 'seeding awardedMilestones on first-ever load must not grant SP');
+  assert.doesNotMatch(seedBlockMatch[0], /renderSp\(\);/, 'no SP was granted, so no need to re-render it');
+});
+
 test('renderIncrementalPage derives SKILL_BRANCH_LENGTHS and the loadSkillLevels() fallback from the current branch data (production:7, management:7, luck:6)', () => {
   const html = renderIncrementalPage({});
   // Node-source-level property (derivation via incrementalSkills.BRANCH_ORDER.reduce(...) rather than

@@ -135,6 +135,11 @@ test('buildSkillClientScript embeds the pure functions by source and wires unloc
   assert.doesNotThrow(() => new Function(script), 'buildSkillClientScript output must be syntactically valid standalone JS');
 });
 
+test('renderSkillTree guards against being called before skillBeadEls is initialized (premature call from incrementalPage.js)', () => {
+  const script = skills.buildSkillClientScript();
+  assert.match(script, /function renderSkillTree\(\)\{if\(typeof skillBeadEls==="undefined"\)return;/);
+});
+
 test('research base cost is a single module-scope constant shared by the HTML placeholder and the client script', () => {
   assert.equal(skills.RESEARCH_BASE_COST, 500);
   const html = skills.renderSkillPanelHtml();
