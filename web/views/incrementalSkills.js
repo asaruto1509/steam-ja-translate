@@ -31,6 +31,7 @@ var SKILL_BRANCHES = {
 
 var BRANCH_ORDER = ['production', 'management', 'luck'];
 var BRANCH_LABELS = { production: '生産ライン強化', management: '経営戦略', luck: '強運' };
+var RESEARCH_BASE_COST = 500;
 
 function computeOutputMult(skillLevels) {
   var sum = 0;
@@ -147,7 +148,7 @@ function renderSkillPanelHtml() {
     + '<div class="incremental-skills-hud">'
     + '<div class="incremental-chip incremental-sp"><div><div class="incremental-chip-label">SP</div>'
     + '<div class="incremental-chip-value"><span id="incremental-sp-value">0</span></div></div></div>'
-    + '<button type="button" id="incremental-research-btn">🔬 研究にDPを投資(<span id="incremental-research-cost">500</span> DP)</button>'
+    + '<button type="button" id="incremental-research-btn">🔬 研究にDPを投資(<span id="incremental-research-cost">' + RESEARCH_BASE_COST + '</span> DP)</button>'
     + '</div>'
     + '<div class="incremental-skill-branches">' + branchesHtml + '</div>'
     + '</div>';
@@ -227,7 +228,7 @@ function buildSkillClientScript() {
     + '});'
     + 'var researchBtn=page.querySelector("#incremental-research-btn");'
     + 'var researchCostEl=page.querySelector("#incremental-research-cost");'
-    + 'var RESEARCH_BASE_COST=500;'
+    + 'var RESEARCH_BASE_COST=' + RESEARCH_BASE_COST + ';'
     + 'var RESEARCH_COST_GROWTH=1.25;'
     + 'function researchCost(){return Math.ceil(RESEARCH_BASE_COST*Math.pow(RESEARCH_COST_GROWTH,researchUses));}'
     + 'function renderResearchCost(){if(researchCostEl)researchCostEl.textContent=researchCost().toLocaleString();}'
@@ -254,6 +255,7 @@ module.exports = {
   SKILL_BRANCHES: SKILL_BRANCHES,
   BRANCH_ORDER: BRANCH_ORDER,
   BRANCH_LABELS: BRANCH_LABELS,
+  RESEARCH_BASE_COST: RESEARCH_BASE_COST,
   computeOutputMult: computeOutputMult,
   computeCostMult: computeCostMult,
   computeClickMult: computeClickMult,

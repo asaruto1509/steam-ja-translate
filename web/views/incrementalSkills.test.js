@@ -134,3 +134,11 @@ test('buildSkillClientScript embeds the pure functions by source and wires unloc
   assert.match(script, /function researchCost\(\)\{return Math\.ceil\(RESEARCH_BASE_COST\*Math\.pow\(RESEARCH_COST_GROWTH,researchUses\)\);\}/);
   assert.doesNotThrow(() => new Function(script), 'buildSkillClientScript output must be syntactically valid standalone JS');
 });
+
+test('research base cost is a single module-scope constant shared by the HTML placeholder and the client script', () => {
+  assert.equal(skills.RESEARCH_BASE_COST, 500);
+  const html = skills.renderSkillPanelHtml();
+  assert.match(html, new RegExp('id="incremental-research-cost">' + skills.RESEARCH_BASE_COST + '</span>'));
+  const script = skills.buildSkillClientScript();
+  assert.match(script, new RegExp('var RESEARCH_BASE_COST=' + skills.RESEARCH_BASE_COST + ';'));
+});

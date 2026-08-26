@@ -61,7 +61,7 @@ test('renderIncrementalPage computes per-tier output and total output scaled by 
   assert.match(html, /sum\*prestigeMult\*computeOutputMult\(skillLevels\);/);
   assert.match(html, /setInterval\(function\(\)\{/);
   assert.match(html, /var d=Math\.max\(0,Math\.min\(OFFLINE_CAP_SECONDS\+computeOfflineBonusSeconds\(skillLevels\),\(now-lastTick\)\/1000\)\);/);
-  assert.match(html, /addDp\(totalOutputPerSec\(\)\*d\);/);
+  assert.match(html, /addDp\(totalOutputPerSec\(\)\*d\*offlineBoostMult\(\)\);/);
 });
 
 test('renderIncrementalPage grants capped offline progress based on elapsed time since lastTick, and shows a welcome-back message', () => {
@@ -69,7 +69,7 @@ test('renderIncrementalPage grants capped offline progress based on elapsed time
   assert.match(html, /var OFFLINE_CAP_SECONDS=28800;/);
   assert.match(html, /var effectiveOfflineCap=OFFLINE_CAP_SECONDS\+computeOfflineBonusSeconds\(skillLevels\);/);
   assert.match(html, /var elapsedSec=Math\.max\(0,Math\.min\(effectiveOfflineCap,\(nowMs-lastTick\)\/1000\)\);/);
-  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*\(hasOfflineBoost\(skillLevels\)\?1\.5:1\);/);
+  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*offlineBoostMult\(\);/);
   assert.match(html, /welcomeEl\.textContent="おかえりなさい、\+"\+Math\.floor\(offlineGain\)\.toLocaleString\(\)\+" DP";/);
 });
 
@@ -294,7 +294,7 @@ test('renderIncrementalPage applies skill multipliers to output, tier cost, clic
   assert.match(html, /function tierCost\(i,ownedCount\)\{return tierBaseCost\(i\)\*Math\.pow\(TIER_COST_GROWTH,ownedCount\)\*computeCostMult\(skillLevels\);\}/);
   assert.match(html, /addDp\(CLICK_BASE\*prestigeMult\*computeClickMult\(skillLevels\)\);/);
   assert.match(html, /var effectiveOfflineCap=OFFLINE_CAP_SECONDS\+computeOfflineBonusSeconds\(skillLevels\);/);
-  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*\(hasOfflineBoost\(skillLevels\)\?1\.5:1\);/);
+  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*offlineBoostMult\(\);/);
   assert.match(html, /var effectiveExchangeRate=EXCHANGE_RATE\/computeExchangeMult\(skillLevels\);/);
   assert.match(html, /var effectiveDpToCreditsRate=DP_TO_CREDITS_RATE\*computeExchangeMult\(skillLevels\);/);
   assert.match(html, /var delay=\(20000\+Math\.random\(\)\*25000\)\*computeBonusIntervalMult\(skillLevels\);/);
@@ -335,7 +335,7 @@ test('renderIncrementalPage grants weighted SP (1..5) the first time each achiev
   const achievementsFnMatch = html.match(/function renderAchievements\(\)\{[\s\S]*?lastAchievedCount=achieved;/);
   assert.ok(achievementsFnMatch, 'expected to find renderAchievements source');
   assert.match(achievementsFnMatch[0], /var spGain=0;/);
-  assert.match(achievementsFnMatch[0], /for\(var ai=lastAchievedCount\+1;ai<=achieved;ai\+\+\)\{spGain\+=ai;\}/);
+  assert.match(achievementsFnMatch[0], /for\(var ai=awardedMilestones\+1;ai<=achieved;ai\+\+\)\{spGain\+=ai;\}/);
   assert.match(achievementsFnMatch[0], /sp\+=spGain;/);
 });
 
@@ -344,4 +344,59 @@ test('renderIncrementalPage embeds a syntactically valid client script with the 
   const scriptMatch = page.match(/<script>([\s\S]*)<\/script>/);
   assert.ok(scriptMatch);
   assert.doesNotThrow(() => new Function(scriptMatch[1]));
+});
+
+test('renderIncrementalPage tracks awarded milestones separately from the fanfare-suppression flag, in a persisted key', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var AWARDED_MILESTONES_KEY="ja_trans_incremental_awarded_milestones_v1";/);
+  assert.match(html, /var awardedMilestones=loadNumber\(AWARDED_MILESTONES_KEY,0\);/);
+  assert.match(html, /localStorage\.setItem\(AWARDED_MILESTONES_KEY,String\(awardedMilestones\)\);/);
+});
+
+test('renderIncrementalPage grants milestone SP off awardedMilestones (immune to offline-crossed milestones being forfeited) and refreshes the skill tree', () => {
+  const html = renderIncrementalPage({});
+  const achievementsFnMatch = html.match(/function renderAchievements\(\)\{[\s\S]*?lastAchievedCount=achieved;/);
+  assert.ok(achievementsFnMatch, 'expected to find renderAchievements source');
+  const body = achievementsFnMatch[0];
+  const grantBlockMatch = body.match(/if\(achieved>awardedMilestones\)\{[\s\S]*?renderSkillTree\(\);\}/);
+  assert.ok(grantBlockMatch, 'expected an if(achieved>awardedMilestones){...} grant block');
+  const grantBlock = grantBlockMatch[0];
+  assert.match(grantBlock, /awardedMilestones=achieved;/);
+  assert.match(grantBlock, /renderSkillTree\(\);/);
+  assert.match(grantBlock, /saveState\(\);/);
+  assert.match(grantBlock, /renderSp\(\);/);
+  // sound stays gated on lastAchievedCount alone, as a separate statement not tied to the SP grant
+  assert.match(body, /if\(lastAchievedCount!==null&&achieved>lastAchievedCount\)\{playAchievementSound\(\);\}/);
+});
+
+test('renderIncrementalPage refreshes the skill tree after a prestige SP grant', () => {
+  const html = renderIncrementalPage({});
+  const prestigeHandlerMatch = html.match(/prestigeBtn\.addEventListener\("click",function\(\)\{[\s\S]*?\}\);/);
+  assert.ok(prestigeHandlerMatch, 'expected to find the prestige click handler');
+  const handler = prestigeHandlerMatch[0];
+  const spIdx = handler.indexOf('renderSp();');
+  const skillTreeIdx = handler.indexOf('renderSkillTree();');
+  assert.ok(spIdx >= 0, 'expected renderSp() in the prestige handler');
+  assert.ok(skillTreeIdx > spIdx, 'expected renderSkillTree() to appear after renderSp() in the prestige handler');
+});
+
+test('renderIncrementalPage applies the management-capstone offline boost via one shared helper at both the reload-time and setInterval catch-up sites', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function offlineBoostMult\(\)\{return hasOfflineBoost\(skillLevels\)\?1\.5:1;\}/);
+  assert.equal((html.match(/function offlineBoostMult\(\)/g) || []).length, 1, 'offlineBoostMult should be defined exactly once');
+  assert.match(html, /var offlineGain=totalOutputPerSec\(\)\*elapsedSec\*offlineBoostMult\(\);/);
+  assert.match(html, /addDp\(totalOutputPerSec\(\)\*d\*offlineBoostMult\(\)\);/);
+  // neither call site should still carry the old inline ternary
+  assert.doesNotMatch(html, /elapsedSec\*\(hasOfflineBoost\(skillLevels\)\?1\.5:1\)/);
+  assert.doesNotMatch(html, /addDp\(totalOutputPerSec\(\)\*d\);/);
+});
+
+test('renderIncrementalPage derives SKILL_BRANCH_LENGTHS and the loadSkillLevels() fallback from the current branch data (production:7, management:7, luck:6)', () => {
+  const html = renderIncrementalPage({});
+  // Node-source-level property (derivation via incrementalSkills.BRANCH_ORDER.reduce(...) rather than
+  // hand-typed branch names) is verified by reading web/views/incrementalPage.js directly -- the
+  // rendered client-script text only proves the resulting numeric values are correct, since the
+  // .reduce() call itself runs at Node render time and never appears in client-script output.
+  assert.match(html, /var SKILL_BRANCH_LENGTHS=\{"production":7,"management":7,"luck":6\};/);
+  assert.match(html, /var fallback=\{"production":0,"management":0,"luck":0\};/);
 });
