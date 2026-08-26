@@ -300,3 +300,23 @@ test('renderIncrementalPage applies skill multipliers to output, tier cost, clic
   assert.match(html, /var bonus=Math\.max\(10,totalOutputPerSec\(\)\*30\+CLICK_BASE\*20\)\*computeBonusValueMult\(skillLevels\);/);
   assert.match(html, /prestigeMult=1\+PRESTIGE_COEF\*computePrestigeCoefMult\(skillLevels\)\*Math\.sqrt\(lifetimeDp\/PRESTIGE_DIVISOR\);/);
 });
+
+test('renderIncrementalPage auto-buys the cheapest affordable tier every 60s once the production branch is fully unlocked', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function buyTierIndex\(i\)\{/);
+  assert.match(html, /var cost=tierCost\(i,owned\[i\]\);/);
+  assert.match(html, /if\(dp<cost\)return false;/);
+  assert.match(html, /dp-=cost;/);
+  assert.match(html, /owned\[i\]\+\+;/);
+  assert.match(html, /return true;/);
+  assert.match(html, /t\.buyBtn\.addEventListener\("click",function\(\)\{if\(!buyTierIndex\(i\)\)\{playDeniedSound\(\);return;\}/);
+  assert.match(html, /if\(hasAutoBuy\(skillLevels\)\)\{/);
+  assert.match(html, /autoBuyTimer\+=d;/);
+  assert.match(html, /if\(autoBuyTimer>=60\)\{/);
+});
+
+test('renderIncrementalPage auto-collects the bonus star 5 seconds after it spawns once the luck branch is fully unlocked', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /if\(hasAutoCollectBonus\(skillLevels\)\)\{/);
+  assert.match(html, /setTimeout\(function\(\)\{if\(bonusEl\)bonusEl\.click\(\);\},5000\);/);
+});
