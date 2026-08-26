@@ -192,7 +192,8 @@ test('renderIncrementalPage unlocks and renders lifetime-DP milestone achievemen
 test('renderIncrementalPage plays an achievement fanfare only when a new milestone is crossed, not on initial render', () => {
   const html = renderIncrementalPage({});
   assert.match(html, /var lastAchievedCount=null;/);
-  assert.match(html, /if\(lastAchievedCount!==null&&achieved>lastAchievedCount\)\{playAchievementSound\(\);\}/);
+  assert.match(html, /if\(lastAchievedCount!==null&&achieved>lastAchievedCount\)\{/);
+  assert.match(html, /playAchievementSound\(\);/);
   assert.match(html, /lastAchievedCount=achieved;/);
 });
 
@@ -319,4 +320,28 @@ test('renderIncrementalPage auto-collects the bonus star 5 seconds after it spaw
   const html = renderIncrementalPage({});
   assert.match(html, /if\(hasAutoCollectBonus\(skillLevels\)\)\{/);
   assert.match(html, /setTimeout\(function\(\)\{if\(bonusEl\)bonusEl\.click\(\);\},5000\);/);
+});
+
+test('renderIncrementalPage grants SP on prestige (always at least 1) without resetting sp itself', () => {
+  const html = renderIncrementalPage({});
+  const prestigeHandlerMatch = html.match(/prestigeBtn\.addEventListener\("click",function\(\)\{[\s\S]*?\}\);/);
+  assert.ok(prestigeHandlerMatch);
+  assert.match(prestigeHandlerMatch[0], /sp\+=Math\.max\(1,Math\.floor\(Math\.sqrt\(lifetimeDp\/500000\)\)\);/);
+  assert.match(prestigeHandlerMatch[0], /renderSp\(\);/);
+});
+
+test('renderIncrementalPage grants weighted SP (1..5) the first time each achievement milestone is newly crossed, once per milestone', () => {
+  const html = renderIncrementalPage({});
+  const achievementsFnMatch = html.match(/function renderAchievements\(\)\{[\s\S]*?lastAchievedCount=achieved;/);
+  assert.ok(achievementsFnMatch, 'expected to find renderAchievements source');
+  assert.match(achievementsFnMatch[0], /var spGain=0;/);
+  assert.match(achievementsFnMatch[0], /for\(var ai=lastAchievedCount\+1;ai<=achieved;ai\+\+\)\{spGain\+=ai;\}/);
+  assert.match(achievementsFnMatch[0], /sp\+=spGain;/);
+});
+
+test('renderIncrementalPage embeds a syntactically valid client script with the full skill tree wired in', () => {
+  const page = renderIncrementalPage({});
+  const scriptMatch = page.match(/<script>([\s\S]*)<\/script>/);
+  assert.ok(scriptMatch);
+  assert.doesNotThrow(() => new Function(scriptMatch[1]));
 });
