@@ -438,7 +438,8 @@ test('the client script defines renderOfficeFloor, keyed off owned[] and TIER_TH
   const html = renderIncrementalPage({});
   assert.match(html, /function renderOfficeFloor\(\)\{/);
   assert.match(html, /var TIER_THUMB_PALETTE=\[/);
-  assert.match(html, /if\(owned\[i\]<=0\)continue;/);
+  // owners[] collects only tiers with owned[oi]>0 -- one desk+character per owned tier.
+  assert.match(html, /if\(owned\[oi\]>0\)owners\.push\(oi\);/);
 });
 
 test('renderTiers() also refreshes the office floor so hiring/prestige keep it in sync', () => {
@@ -469,7 +470,7 @@ test('the client script queries the office floor element by the exact id the HTM
 
 test('renderOfficeFloor() skips the rebuild when the set of owned tiers has not changed, to avoid resetting characters\' walking CSS transitions', () => {
   const html = renderIncrementalPage({});
-  const fnMatch = html.match(/function renderOfficeFloor\(\)\{[\s\S]*?\n?officeFloorEl\.appendChild\(el\);officeChars\.push\(el\);\}\}/);
+  const fnMatch = html.match(/function renderOfficeFloor\(\)\{[\s\S]*?officeChars\.push\(el\);\}\);\}/);
   assert.ok(fnMatch, 'expected to find renderOfficeFloor source');
   const body = fnMatch[0];
   assert.match(body, /if\(!officeFloorEl\)return;/);
@@ -488,4 +489,67 @@ test('renderOfficeFloor() skips the rebuild when the set of owned tiers has not 
 test('officeSig starts empty so the first renderOfficeFloor() call is not skipped', () => {
   const html = renderIncrementalPage({});
   assert.match(html, /var officeSig="";/);
+});
+
+test('the office floor panel starts with no static desk markup -- desks are generated per owned tier at runtime', () => {
+  const html = renderIncrementalPage({});
+  const floorMatch = html.match(/<div class="incremental-office-floor" id="incremental-office-floor">([\s\S]*?)<\/div>/);
+  assert.ok(floorMatch, 'expected to find the office floor container');
+  assert.doesNotMatch(floorMatch[1], /incremental-office-desk/,
+    'the floor container must render empty; desks are created by renderOfficeFloor()');
+});
+
+test('renderOfficeFloor() creates one desk (with a monitor child) per owned tier, laid out in a grid', () => {
+  const html = renderIncrementalPage({});
+  const fnMatch = html.match(/function renderOfficeFloor\(\)\{[\s\S]*?officeChars\.push\(el\);\}\);\}/);
+  assert.ok(fnMatch, 'expected to find renderOfficeFloor source');
+  const body = fnMatch[0];
+  assert.match(body, /officeDesks\.forEach\(function\(el\)\{el\.remove\(\);\}\);/,
+    'desks must be cleared on rebuild alongside characters');
+  assert.match(body, /officeDesks=\[\];/);
+  assert.match(body, /desk\.className="incremental-office-desk";/);
+  assert.match(body, /var pos=officeDeskPosition\(k,owners\.length\);/);
+  assert.match(body, /monitor\.className="incremental-office-monitor";/);
+  assert.match(body, /desk\.appendChild\(monitor\);/);
+  assert.match(body, /officeDesks\.push\(desk\);/);
+});
+
+test('officeDeskPosition lays desks out in a grid capped at 4 columns', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function officeDeskPosition\(index,count\)\{/);
+  assert.match(html, /var cols=Math\.min\(4,count\);/);
+});
+
+test('during the work phase, characters walk to their assigned desk and get a working animation + effect', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function moveCharToDesk\(el,desk\)\{/);
+  assert.match(html, /function spawnOfficeEffect\(el\)\{/);
+  assert.match(html, /el\.classList\.add\("is-working"\);/);
+  assert.match(html, /monitor\.classList\.add\("is-active"\);/);
+  assert.match(html, /spawnOfficeEffect\(el\);/);
+});
+
+test('the work/walk phase alternates on a shared timer, and characters stop wandering while working', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var OFFICE_WALK_TICKS=3;/);
+  assert.match(html, /var OFFICE_WORK_TICKS=3;/);
+  assert.match(html, /var officePhase="walk";/);
+  assert.match(html, /officePhaseTicksLeft--;/);
+  assert.match(html, /if\(officePhase==="walk"\)\{/);
+});
+
+test('a second, faster interval toggles a distinct typing pose while a character is working', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var CHAR_PIXELS_WORK=\[/);
+  assert.match(html, /if\(officePhase!=="work"\)return;/);
+  assert.match(html, /el\.classList\.toggle\("is-typing"\)/);
+  assert.match(html, /\},500\);/);
+});
+
+test('CLIENT_STYLE animates the monitor flicker, the working bob, and the floating effect', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /\.incremental-office-monitor\{/);
+  assert.match(html, /\.incremental-office-monitor\.is-active\{animation:incrementalOfficeMonitor/);
+  assert.match(html, /\.office-char\.is-working\{animation:incrementalOfficeBob/);
+  assert.match(html, /\.incremental-office-effect\{/);
 });
