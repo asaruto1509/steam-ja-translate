@@ -447,3 +447,14 @@ test('renderTiers() also refreshes the office floor so hiring/prestige keep it i
   // match must cross a brace: use a non-greedy [\s\S]*? instead of [^}]*.
   assert.match(html, /function renderTiers\(\)\{[\s\S]*?renderOfficeFloor\(\);\}/);
 });
+
+test('the client script walks office characters to a new random spot every 1.5s', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function stepOfficeChars\(\)\{/);
+  assert.match(html, /setInterval\(stepOfficeChars,1500\);/);
+});
+
+test('CLIENT_STYLE gives office characters a smooth walking transition', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /\.office-char\{[^}]*transition:left 1\.5s linear,top 1\.5s linear/);
+});
