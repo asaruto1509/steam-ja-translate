@@ -433,3 +433,17 @@ test('CLIENT_STYLE styles the office floor panel and desk decorations', () => {
   assert.match(html, /\.incremental-office-floor\{[^}]*position:relative/);
   assert.match(html, /\.incremental-office-desk\{/);
 });
+
+test('the client script defines renderOfficeFloor, keyed off owned[] and TIER_THUMB_PALETTE', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function renderOfficeFloor\(\)\{/);
+  assert.match(html, /var TIER_THUMB_PALETTE=\[/);
+  assert.match(html, /if\(owned\[i\]<=0\)continue;/);
+});
+
+test('renderTiers() also refreshes the office floor so hiring/prestige keep it in sync', () => {
+  const html = renderIncrementalPage({});
+  // renderTiers()'s own for-loop closes with a "}" before this call, so the
+  // match must cross a brace: use a non-greedy [\s\S]*? instead of [^}]*.
+  assert.match(html, /function renderTiers\(\)\{[\s\S]*?renderOfficeFloor\(\);\}/);
+});
