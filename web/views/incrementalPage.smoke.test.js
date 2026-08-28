@@ -28,8 +28,8 @@ function extractClientScript(html) {
   return m[1];
 }
 
-function runClientScriptInSandbox(script) {
-  const storage = {};
+function runClientScriptInSandbox(script, seedStorage) {
+  const storage = seedStorage || {};
   const localStorageStub = {
     getItem: (k) => (Object.prototype.hasOwnProperty.call(storage, k) ? storage[k] : null),
     setItem: (k, v) => { storage[k] = String(v); },
@@ -70,6 +70,15 @@ test('the generated incremental client script runs to completion without throwin
   const html = renderIncrementalPage({});
   const script = extractClientScript(html);
   runClientScriptInSandbox(script);
+});
+
+test('the generated incremental client script runs to completion without throwing when owned[] is non-zero (exercises renderOfficeFloor()\'s character-creation loop body)', () => {
+  const html = renderIncrementalPage({});
+  const script = extractClientScript(html);
+  const seedStorage = {
+    ja_trans_incremental_owned_v1: JSON.stringify(new Array(12).fill(5)),
+  };
+  runClientScriptInSandbox(script, seedStorage);
 });
 
 module.exports = { makeEl, extractClientScript, runClientScriptInSandbox };
