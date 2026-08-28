@@ -417,3 +417,75 @@ test('renderIncrementalPage derives SKILL_BRANCH_LENGTHS and the loadSkillLevels
   assert.match(html, /var SKILL_BRANCH_LENGTHS=\{"production":7,"management":7,"luck":6\};/);
   assert.match(html, /var fallback=\{"production":0,"management":0,"luck":0\};/);
 });
+
+test('renderIncrementalPage includes an office floor panel above the employee list', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /id="incremental-office-floor"/);
+  assert.match(html, /class="incremental-office-floor"/);
+  const floorIndex = html.indexOf('id="incremental-office-floor"');
+  const tiersPanelIndex = html.indexOf('class="incremental-tiers"');
+  assert.ok(floorIndex > 0 && tiersPanelIndex > 0 && floorIndex < tiersPanelIndex,
+    'office floor panel must appear before the employee tier list panel');
+});
+
+test('CLIENT_STYLE styles the office floor panel and desk decorations', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /\.incremental-office-floor\{[^}]*position:relative/);
+  assert.match(html, /\.incremental-office-desk\{/);
+});
+
+test('the client script defines renderOfficeFloor, keyed off owned[] and TIER_THUMB_PALETTE', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function renderOfficeFloor\(\)\{/);
+  assert.match(html, /var TIER_THUMB_PALETTE=\[/);
+  assert.match(html, /if\(owned\[i\]<=0\)continue;/);
+});
+
+test('renderTiers() also refreshes the office floor so hiring/prestige keep it in sync', () => {
+  const html = renderIncrementalPage({});
+  // renderTiers()'s own for-loop closes with a "}" before this call, so the
+  // match must cross a brace: use a non-greedy [\s\S]*? instead of [^}]*.
+  assert.match(html, /function renderTiers\(\)\{[\s\S]*?renderOfficeFloor\(\);\}/);
+});
+
+test('the client script walks office characters to a new random spot every 1.5s', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /function stepOfficeChars\(\)\{/);
+  assert.match(html, /setInterval\(stepOfficeChars,1500\);/);
+});
+
+test('CLIENT_STYLE gives office characters a smooth walking transition', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /\.office-char\{[^}]*transition:left 1\.5s linear,top 1\.5s linear/);
+});
+
+test('the client script queries the office floor element by the exact id the HTML panel declares', () => {
+  const html = renderIncrementalPage({});
+  // Pins the selector string so an edit to the panel's id or this selector,
+  // without updating both, fails a test instead of silently rendering an
+  // empty/broken office floor panel.
+  assert.match(html, /var officeFloorEl=page\.querySelector\("#incremental-office-floor"\);/);
+});
+
+test('renderOfficeFloor() skips the rebuild when the set of owned tiers has not changed, to avoid resetting characters\' walking CSS transitions', () => {
+  const html = renderIncrementalPage({});
+  const fnMatch = html.match(/function renderOfficeFloor\(\)\{[\s\S]*?\n?officeFloorEl\.appendChild\(el\);officeChars\.push\(el\);\}\}/);
+  assert.ok(fnMatch, 'expected to find renderOfficeFloor source');
+  const body = fnMatch[0];
+  assert.match(body, /if\(!officeFloorEl\)return;/);
+  // Signature is composed from which tiers are owned (one char per tier), not how many of each.
+  assert.match(body, /var sig="";for\(var si=0;si<TIER_COUNT;si\+\+\)\{sig\+=owned\[si\]>0\?"1":"0";\}/);
+  assert.match(body, /if\(sig===officeSig\)return;/);
+  assert.match(body, /officeSig=sig;/);
+  // The early-return check must come after the signature is computed but before the
+  // existing clear-and-rebuild logic runs.
+  const sigCheckIndex = body.indexOf('if(sig===officeSig)return;');
+  const clearIndex = body.indexOf('officeChars.forEach(function(el){el.remove();});');
+  assert.ok(sigCheckIndex > 0 && clearIndex > sigCheckIndex,
+    'signature early-return must happen before the clear-and-rebuild');
+});
+
+test('officeSig starts empty so the first renderOfficeFloor() call is not skipped', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /var officeSig="";/);
+});
