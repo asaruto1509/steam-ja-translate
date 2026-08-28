@@ -417,3 +417,19 @@ test('renderIncrementalPage derives SKILL_BRANCH_LENGTHS and the loadSkillLevels
   assert.match(html, /var SKILL_BRANCH_LENGTHS=\{"production":7,"management":7,"luck":6\};/);
   assert.match(html, /var fallback=\{"production":0,"management":0,"luck":0\};/);
 });
+
+test('renderIncrementalPage includes an office floor panel above the employee list', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /id="incremental-office-floor"/);
+  assert.match(html, /class="incremental-office-floor"/);
+  const floorIndex = html.indexOf('id="incremental-office-floor"');
+  const tiersPanelIndex = html.indexOf('class="incremental-tiers"');
+  assert.ok(floorIndex > 0 && tiersPanelIndex > 0 && floorIndex < tiersPanelIndex,
+    'office floor panel must appear before the employee tier list panel');
+});
+
+test('CLIENT_STYLE styles the office floor panel and desk decorations', () => {
+  const html = renderIncrementalPage({});
+  assert.match(html, /\.incremental-office-floor\{[^}]*position:relative/);
+  assert.match(html, /\.incremental-office-desk\{/);
+});
