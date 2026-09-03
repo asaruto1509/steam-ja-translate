@@ -250,24 +250,20 @@ app.post('/api/roulette/recommend/spin', async function (req, res) {
 });
 
 async function buildChatGameContext(appid) {
-  try {
-    var results = await Promise.all([
-      steamLib.fetchPriceDetail(appid),
-      steamLib.fetchReviewSummary(appid),
-      steamLib.fetchGameContext(appid)
-    ]);
-    var priceDetail = results[0];
-    var reviewSummary = results[1];
-    var context = results[2];
-    if (!priceDetail) return null;
-    return {
-      name: priceDetail.name,
-      reviewSummaryText: reviewSummary ? (reviewSummary.positivePct + '% (' + reviewSummary.totalReviews.toLocaleString() + '件)') : null,
-      categories: context ? context.categories : []
-    };
-  } catch (e) {
-    return null;
-  }
+  var results = await Promise.allSettled([
+    steamLib.fetchPriceDetail(appid),
+    steamLib.fetchReviewSummary(appid),
+    steamLib.fetchGameContext(appid)
+  ]);
+  var priceDetail = results[0].status === 'fulfilled' ? results[0].value : null;
+  var reviewSummary = results[1].status === 'fulfilled' ? results[1].value : null;
+  var context = results[2].status === 'fulfilled' ? results[2].value : null;
+  if (!priceDetail) return null;
+  return {
+    name: priceDetail.name,
+    reviewSummaryText: reviewSummary ? (reviewSummary.positivePct + '% (' + reviewSummary.totalReviews.toLocaleString() + '件)') : null,
+    categories: context ? context.categories : []
+  };
 }
 
 app.post('/chat/message', async function (req, res) {
@@ -280,7 +276,11 @@ app.post('/chat/message', async function (req, res) {
       return;
     }
 
-    var gameContext = scope ? await buildChatGameContext(scope) : null;
+    // scope doubles as a Steam appid for game-context lookups; only real
+    // numeric appids are sent to the Steam API (an arbitrary client-supplied
+    // scope string is still a valid chatStore storage key, just not one we
+    // query Steam with).
+    var gameContext = (scope && /^\d+$/.test(scope)) ? await buildChatGameContext(scope) : null;
     var history = chatStore.getConversation(scope);
     var prompt = chatPrompt.buildChatPrompt(history, message, gameContext);
 
@@ -291,6 +291,7 @@ app.post('/chat/message', async function (req, res) {
       reply = '';
     }
     if (!reply) reply = 'うまく返答を生成できなかった…';
+    reply = String(reply).slice(0, 2000);
 
     var now = Date.now();
     chatStore.addMessage(scope, { role: 'user', text: message, at: now });
