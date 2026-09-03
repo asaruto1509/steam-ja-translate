@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { applyMessage } = require('./chatStore.js');
+const { applyMessage, readGame } = require('./chatStore.js');
 
 test('applyMessage appends the entry to the end of the list', () => {
   const result = applyMessage([{ role: 'user', text: 'a' }], { role: 'assistant', text: 'b' }, 30);
@@ -28,4 +28,23 @@ test('applyMessage does not mutate the input array', () => {
   const original = [{ role: 'user', text: 'a' }];
   applyMessage(original, { role: 'assistant', text: 'b' }, 30);
   assert.deepEqual(original, [{ role: 'user', text: 'a' }]);
+});
+
+test('readGame returns the stored array for an own-property key', () => {
+  const byGame = { '367520': [{ role: 'user', text: 'hi' }] };
+  assert.deepEqual(readGame(byGame, '367520'), [{ role: 'user', text: 'hi' }]);
+});
+
+test('readGame returns an empty array for a missing key', () => {
+  assert.deepEqual(readGame({}, '999'), []);
+});
+
+test('readGame does not resolve to an inherited prototype member for scope keys like "constructor"/"toString"', () => {
+  assert.deepEqual(readGame({}, 'constructor'), []);
+  assert.deepEqual(readGame({}, 'toString'), []);
+  assert.deepEqual(readGame({}, '__proto__'), []);
+});
+
+test('readGame falls back to an empty array when a stored entry is corrupt (not an array)', () => {
+  assert.deepEqual(readGame({ '1': 'not-an-array' }, '1'), []);
 });

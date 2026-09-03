@@ -53,6 +53,17 @@ test('renderLayout wires chat widgets to POST /chat/message and /chat/clear via 
   assert.match(page, /fetch\("\/chat\/clear"/);
 });
 
+test('renderLayout guards the loading bubble against a cleared/detached message list before writing to it', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /if\(loadingBubble\.isConnected\)\{renderMarkdown\(loadingBubble,d\.reply/);
+  assert.match(page, /if\(loadingBubble\.isConnected\)\{renderMarkdown\(loadingBubble,"通信エラーが発生しました"\)/);
+});
+
+test('renderLayout handles a failed /chat/clear request without an unhandled rejection', () => {
+  const page = renderLayout('<p>x</p>', {});
+  assert.match(page, /fetch\("\/chat\/clear".*\.catch\(function\(\)\{\}\)/);
+});
+
 test('renderLayout includes a search suggestions dropdown wired to the search input', () => {
   const page = renderLayout('<p>x</p>', {});
   assert.match(page, /id="search-input"/);

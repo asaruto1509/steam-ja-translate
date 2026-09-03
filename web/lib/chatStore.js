@@ -14,6 +14,14 @@ function resolveKey(scope) {
   return (scope == null || scope === 'standalone') ? 'standalone' : String(scope);
 }
 
+// Object.prototype.hasOwnProperty guard: a scope value like "constructor" or
+// "toString" would otherwise resolve byGame[key] to an inherited function via
+// prototype-chain lookup instead of a stored conversation array.
+function readGame(byGame, key) {
+  var v = Object.prototype.hasOwnProperty.call(byGame, key) ? byGame[key] : null;
+  return Array.isArray(v) ? v : [];
+}
+
 function loadData() {
   try {
     var raw = fs.readFileSync(DATA_FILE, 'utf8');
@@ -38,7 +46,7 @@ function saveData(data) {
 function getConversation(scope) {
   var data = loadData();
   var key = resolveKey(scope);
-  return key === 'standalone' ? data.standalone : (data.byGame[key] || []);
+  return key === 'standalone' ? data.standalone : readGame(data.byGame, key);
 }
 
 function addMessage(scope, entry) {
@@ -48,7 +56,7 @@ function addMessage(scope, entry) {
     if (key === 'standalone') {
       data.standalone = applyMessage(data.standalone, entry, HISTORY_MAX_SIZE);
     } else {
-      data.byGame[key] = applyMessage(data.byGame[key] || [], entry, HISTORY_MAX_SIZE);
+      data.byGame[key] = applyMessage(readGame(data.byGame, key), entry, HISTORY_MAX_SIZE);
     }
     saveData(data);
   } catch (e) {
@@ -73,6 +81,7 @@ function clearConversation(scope) {
 
 module.exports = {
   applyMessage: applyMessage,
+  readGame: readGame,
   getConversation: getConversation,
   addMessage: addMessage,
   clearConversation: clearConversation
